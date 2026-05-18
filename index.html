@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d91">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Portal Pronóstico Cartera Q2 2026 - GLI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #eef2f7; color: #1f2937; padding: 6px 8px; }
+  h1 { color: #0b3d91; font-size: 14px; margin-bottom: 0; line-height: 1.2; }
+  .subtitle { color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+
+  /* ====== HEADER ====== */
+  .header-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px; gap: 8px;
+  }
+  .header-left { flex: 1; }
+  .upload-btn-group { display: flex; gap: 3px; align-items: center; }
+  .upload-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px;
+    background: white; cursor: pointer; font-size: 10px; color: #374151;
+    transition: all 0.15s; font-weight: 500;
+  }
+  .upload-btn:hover { border-color: #0b3d91; background: #eff6ff; color: #0b3d91; }
+  .upload-btn.loaded { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  .upload-btn .ic { font-size: 11px; }
+  .upload-btn input[type=file] { display: none; }
+
+  /* ====== ETIQUETAS DE FILA ====== */
+  .row-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px; margin-bottom: 3px; display: inline-block;
+  }
+  .tag-company { background: #0b3d91; color: white; }
+  .tag-filtered { background: #b45309; color: white; margin-top: 4px; }
+
+  /* ====== KPI + INSIGHT COMBINED ROW ====== */
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+  .kpi-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #0b3d91;
+    min-width: 0; overflow: hidden;
+  }
+  .kpi-card .label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .delta { font-size: 9px; line-height: 1.1; }
+  .kpi-card .delta.up { color: #047857; font-weight: 600; }
+  .kpi-card .delta.down { color: #b91c1c; font-weight: 600; }
+  .kpi-card.k2 { border-left-color: #0891b2; }
+  .kpi-card.k3 { border-left-color: #ca8a04; }
+  .kpi-card.k4 { border-left-color: #db2777; }
+  .kpi-card.k5 { border-left-color: #7c3aed; }
+  .kpi-card.dso-green { background: linear-gradient(135deg, #ecfdf5 0%, white 60%); border-left-color: #10b981; }
+  .kpi-card.dso-yellow { background: linear-gradient(135deg, #fefce8 0%, white 60%); border-left-color: #eab308; }
+  .kpi-card.dso-orange { background: linear-gradient(135deg, #fff7ed 0%, white 60%); border-left-color: #f97316; }
+  .kpi-card.dso-red { background: linear-gradient(135deg, #fef2f2 0%, white 60%); border-left-color: #dc2626; }
+
+  /* Insight semáforo cards (compactos, en la misma fila que KPIs) */
+  .insight-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #6b7280;
+    min-width: 0; overflow: hidden;
+  }
+  .insight-card.success { border-left-color: #10b981; background: linear-gradient(135deg, #ecfdf5 0%, white 60%); }
+  .insight-card.warning { border-left-color: #f59e0b; background: linear-gradient(135deg, #fefce8 0%, white 60%); }
+  .insight-card.danger { border-left-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, white 60%); }
+  .insight-card .ic-label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .insight-card .ic-value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; }
+  .insight-card .ic-sub { font-size: 9px; color: #4b5563; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ====== GRÁFICA INFERIOR (Venta mensual vs compañía) ====== */
+  .bottom-chart-wrap {
+    background: white; border-radius: 8px; padding: 10px 14px; margin-top: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .bottom-chart-wrap .bc-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .bottom-chart-wrap .bc-title {
+    font-size: 12px; font-weight: 700; color: #0b3d91; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .bottom-chart-wrap .bc-legend { display: flex; gap: 14px; font-size: 11px; color: #374151; }
+  .bottom-chart-wrap .bc-legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .bottom-chart-wrap .bc-canvas { width: 100%; height: 200px; position: relative; }
+
+  /* ====== INSIGHTS BANNER - ahora compacto a una sola línea ====== */
+  .insights-banner {
+    background: linear-gradient(90deg, #0b3d91 0%, #1e40af 100%);
+    color: white; border-radius: 6px; padding: 6px 12px; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(11,61,145,0.15);
+    font-size: 11px;
+  }
+  .insights-banner .ib-icon { font-size: 20px; }
+  .insights-banner .ib-title { font-size: 9px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+  .insights-banner .ib-headline { font-size: 12px; font-weight: 600; line-height: 1.2; }
+  .insights-banner .ib-stats { display: flex; gap: 14px; margin-left: auto; }
+  .insights-banner .ib-stat .ib-lbl { font-size: 8.5px; opacity: 0.8; text-transform: uppercase; }
+  .insights-banner .ib-stat .ib-val { font-size: 13px; font-weight: 700; }
+
+  /* ====== CONTROLS ====== */
+  .controls {
+    background: white; border-radius: 6px; padding: 5px 8px; margin-bottom: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+    display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;
+    overflow-x: auto;
+  }
+  .controls label { font-size: 10.5px; color: #374151; font-weight: 600; white-space: nowrap; }
+  .controls input[type=text], .controls select {
+    padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 11px;
+  }
+  .controls input[type=text] { min-width: 140px; }
+  .controls .btn {
+    background: #0b3d91; color: white; padding: 3px 9px; border: none;
+    border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;
+  }
+  .controls .btn:hover { background: #093680; }
+  .controls .btn.secondary { background: #6b7280; }
+  .controls .btn.secondary:hover { background: #4b5563; }
+  .controls .target-control {
+    display: flex; align-items: center; gap: 4px; padding: 2px 7px;
+    background: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px;
+  }
+  .controls .target-control input { width: 44px; padding: 1px 4px; border: 1px solid #d97706; border-radius: 3px; font-size: 11px; text-align: center; }
+  .controls .legend-inline { display: inline-flex; gap: 8px; font-size: 9.5px; color: #4b5563; align-items: center; margin-left: 6px; }
+  .controls .legend-inline .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+
+  /* ====== TABLE ====== */
+  .table-wrapper {
+    background: white; border-radius: 6px; padding: 0; margin-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: auto; max-height: calc(73vh);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; table-layout: auto; }
+  thead th {
+    background: #1e3a8a;  /* AZUL MARINO (default: Status, Cliente) */
+    color: white; padding: 5px 4px; text-align: center;
+    position: sticky; top: 0; z-index: 10; font-size: 10.5px; white-space: normal;
+    border-right: 1px solid rgba(255,255,255,0.1); line-height: 1.15;
+    font-weight: 700; width: 1%;
+  }
+  /* Handle para redimensionar columnas con el mouse */
+  thead th .col-resizer {
+    position: absolute; top: 0; right: 0; width: 6px; height: 100%;
+    cursor: col-resize; user-select: none; z-index: 11;
+    background: transparent;
+  }
+  thead th .col-resizer:hover { background: rgba(255,255,255,0.25); }
+  thead th.text { text-align: left; width: 1%; }
+  thead th.ctr { text-align: center; }
+  thead th.calc-col   { background: #22c55e; }            /* VERDE BANDERA CLARO */
+  thead th.orange-col { background: #ea580c; }            /* NARANJA */
+  thead th.yellow-col { background: #facc15; color: #422006; } /* AMARILLO con texto oscuro */
+  thead th.sugg-col   { background: #7c3aed; }
+  /* Columna filler que absorbe el espacio sobrante a la derecha */
+  thead th.filler, tbody td.filler {
+    background: transparent !important; border: none !important;
+    width: auto; padding: 0;
+  }
+  tbody td {
+    padding: 4px 5px; border-bottom: 1px solid #e5e7eb; text-align: center;
+    white-space: nowrap; vertical-align: middle; font-size: 13px; font-weight: 500;
+  }
+  tbody td.text { text-align: left; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  tbody tr:hover td { background: #f9fafb; }
+  tbody tr.selected td { background: #fef3c7 !important; }
+  tbody td.input-cell { background: #fffbeb; padding: 2px 4px; }
+  tbody td.calc-cell { background: #f0fdf4; font-weight: 700; }
+  tbody td.calc-cell.changed { background: #fde68a; color: #92400e; }
+
+  /* DSO traffic light cell */
+  td.dso-cell { font-weight: 700; text-align: center; font-size: 13px; }
+  td.dso-cell.lvl-excellent { background: #dcfce7; color: #14532d; }
+  td.dso-cell.lvl-good { background: #d1fae5; color: #065f46; }
+  td.dso-cell.lvl-warning { background: #fef9c3; color: #854d0e; }
+  td.dso-cell.lvl-risk { background: #ffedd5; color: #9a3412; }
+  td.dso-cell.lvl-critical { background: #fee2e2; color: #991b1b; }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px;
+    border-radius: 9px; font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .status-badge.lvl-excellent { background: #10b981; color: white; }
+  .status-badge.lvl-good { background: #34d399; color: #064e3b; }
+  .status-badge.lvl-warning { background: #facc15; color: #713f12; }
+  .status-badge.lvl-risk { background: #fb923c; color: #7c2d12; }
+  .status-badge.lvl-critical { background: #ef4444; color: white; }
+  .status-badge.lvl-na { background: #cbd5e1; color: #475569; }
+
+  /* DSO progress bar in row */
+  .dso-bar {
+    display: inline-block; width: 38px; height: 6px; background: #e5e7eb;
+    border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 3px;
+    position: relative;
+  }
+  .dso-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .dso-bar-fill.lvl-excellent { background: #10b981; }
+  .dso-bar-fill.lvl-good { background: #34d399; }
+  .dso-bar-fill.lvl-warning { background: #facc15; }
+  .dso-bar-fill.lvl-risk { background: #fb923c; }
+  .dso-bar-fill.lvl-critical { background: #ef4444; }
+  .dso-bar-target {
+    position: absolute; top:-1px; bottom:-1px; width: 2px; background: #1e40af;
+    box-shadow: 0 0 0 1px white;
+  }
+
+  /* Suggestion cell */
+  td.sugg-cell {
+    background: linear-gradient(90deg, #faf5ff 0%, white 100%);
+    text-align: left; font-size: 9.5px; line-height: 1.2; min-width: 200px;
+    padding: 2px 4px;
+  }
+  td.sugg-cell .sugg-line {
+    display: flex; align-items: center; gap: 3px; margin-bottom: 1px;
+  }
+  td.sugg-cell .sugg-line:last-child { margin-bottom: 0; }
+  td.sugg-cell .sugg-amount {
+    font-weight: 700; padding: 0px 4px; border-radius: 2px;
+    background: rgba(124,58,237,0.1); color: #6d28d9;
+  }
+  td.sugg-cell .sugg-amount.pos { background: rgba(16,185,129,0.13); color: #047857; }
+  td.sugg-cell .sugg-amount.neg { background: rgba(220,38,38,0.13); color: #b91c1c; }
+
+  input.edit {
+    width: 50px; border: 1px solid #d1d5db; border-radius: 3px; padding: 1px 3px;
+    text-align: right; font-size: 12px; font-weight: 600; background: white;
+  }
+  input.edit:focus { outline: 1.5px solid #0b3d91; border-color: #0b3d91; }
+  input.edit.changed { background: #fef08a; }
+  input.edit.dso-target { width: 42px; }
+  .m-suffix {
+    display: inline-block; font-size: 9px; color: #b45309; font-weight: 700;
+    margin-left: 2px; vertical-align: middle;
+  }
+
+  /* ====== DETAIL SECTION ====== */
+  .detail-section {
+    background: white; border-radius: 8px; padding: 8px 10px; margin-top: -2px; margin-bottom: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: none;
+    border-top: 3px solid #b45309; /* color ámbar para hilarlo con la fila "Selección Filtrada" */
+  }
+  .detail-section.active { display: block; }
+  .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .detail-header h3 { color: #0b3d91; font-size: 13px; }
+  .detail-info { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .detail-info .field { padding: 4px 7px; background: #f9fafb; border-radius: 4px; border-left: 3px solid #cbd5e1; min-width: 0; }
+  .detail-info .field.highlight { border-left-color: #0b3d91; background: #eff6ff; }
+  .detail-info .field .lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail-info .field .val { font-size: 12px; font-weight: 700; color: #111827; margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+  .empty-state .icon { font-size: 48px; }
+
+  /* Legend below banner */
+  .legend-row {
+    display: flex; gap: 16px; font-size: 11px; color: #4b5563;
+    align-items: center; flex-wrap: wrap;
+  }
+  .legend-row .lg {
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .legend-row .sw {
+    display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  }
+
+  /* ============================================================== */
+  /* ====== RESPONSIVE / ADAPTACIÓN MÓVIL Y TABLET            ====== */
+  /* ============================================================== */
+
+  /* Tablet horizontal y pantallas medianas (≤ 1200px) */
+  @media (max-width: 1200px) {
+    .top-grid { grid-template-columns: repeat(6, 1fr); }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* Tablet (≤ 1024px) */
+  @media (max-width: 1024px) {
+    body { padding: 6px; }
+    .top-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+    .insights-banner { flex-wrap: wrap; }
+    .insights-banner .ib-stats { margin-left: 0; width: 100%; justify-content: flex-start; }
+  }
+
+  /* Tablet vertical y móviles grandes (≤ 768px) */
+  @media (max-width: 768px) {
+    body { padding: 8px; font-size: 14px; }
+
+    /* Header: apilar verticalmente, botones centrados y tocables */
+    .header-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .header-left { text-align: center; }
+    h1 { font-size: 17px; line-height: 1.25; }
+    .subtitle { font-size: 11px; margin-bottom: 6px; }
+    .upload-btn-group {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .upload-btn {
+      flex: 1 1 30%;
+      justify-content: center;
+      padding: 10px 8px;
+      font-size: 12px;
+      min-height: 40px;
+    }
+    .upload-btn .ic { font-size: 14px; }
+
+    /* KPIs: 3 columnas en móvil grande */
+    .top-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .kpi-card, .insight-card {
+      padding: 6px 8px;
+    }
+    .kpi-card .label, .insight-card .ic-label { font-size: 9px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .kpi-card .delta, .insight-card .ic-sub { font-size: 9px; }
+
+    /* Banner de estrategia */
+    .insights-banner {
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .insights-banner .ib-icon { font-size: 22px; }
+    .insights-banner .ib-headline { font-size: 12px; }
+    .insights-banner .ib-stats {
+      margin-left: 0;
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Controles: permitir saltar de línea para que se acomoden bien */
+    .controls {
+      flex-wrap: wrap;
+      gap: 6px;
+      overflow-x: visible;
+      padding: 8px;
+    }
+    .controls input[type=text],
+    .controls select {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 0;
+      font-size: 13px;
+      padding: 7px 8px;
+      min-height: 38px;
+    }
+    .controls input[type=text] { flex: 1 1 100%; }
+    .controls .btn {
+      padding: 9px 14px;
+      font-size: 13px;
+      min-height: 38px;
+      flex: 1 1 auto;
+    }
+    .controls .target-control {
+      flex: 1 1 calc(50% - 6px);
+      justify-content: space-between;
+      padding: 4px 8px;
+    }
+    .controls .target-control input {
+      width: 60px;
+      padding: 4px 6px;
+      font-size: 13px;
+      min-height: 30px;
+    }
+    .controls .legend-inline {
+      width: 100%;
+      margin-left: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    /* Tabla: scroll horizontal con momentum táctil */
+    .table-wrapper {
+      max-height: 70vh;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 6px;
+    }
+    table { font-size: 12px; }
+    thead th { font-size: 10px; padding: 6px 4px; }
+    tbody td { font-size: 12px; padding: 6px 5px; }
+    input.edit {
+      width: 60px;
+      min-height: 30px;
+      font-size: 13px;
+      padding: 4px 6px;
+    }
+
+    /* Detalle del cliente */
+    .detail-info { grid-template-columns: repeat(2, 1fr); }
+    .detail-info .field .val { font-size: 12px; }
+    .detail-header h3 { font-size: 13px; }
+  }
+
+  /* Móvil estándar (≤ 480px) */
+  @media (max-width: 480px) {
+    body { padding: 5px; }
+
+    h1 { font-size: 15px; }
+    .subtitle { font-size: 10px; }
+
+    /* KPIs: 2 columnas */
+    .top-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+    .kpi-card .value, .insight-card .ic-value { font-size: 14px; }
+
+    /* Cada botón de carga en una línea propia */
+    .upload-btn {
+      flex: 1 1 100%;
+    }
+
+    /* Banner más compacto y apilado */
+    .insights-banner { padding: 8px 10px; }
+    .insights-banner .ib-icon { font-size: 20px; }
+    .insights-banner .ib-headline { font-size: 11px; line-height: 1.3; }
+    .insights-banner .ib-stat .ib-val { font-size: 12px; }
+
+    /* Controles: filtros en 1 columna para legibilidad */
+    .controls select {
+      flex: 1 1 100%;
+    }
+    .controls .target-control {
+      flex: 1 1 100%;
+    }
+    .controls .btn {
+      flex: 1 1 calc(50% - 3px);
+    }
+
+    /* Tabla: altura reducida para que se vea bien con el teclado abierto */
+    .table-wrapper { max-height: 60vh; }
+    table { font-size: 11px; }
+    thead th { font-size: 9.5px; padding: 5px 3px; }
+    tbody td { font-size: 11px; padding: 5px 4px; }
+
+    /* Detalle: una sola columna */
+    .detail-info { grid-template-columns: 1fr; }
+
+    /* Chart si está presente */
+    .bottom-chart-wrap .bc-canvas { height: 240px; }
+    .bottom-chart-wrap .bc-legend { font-size: 10px; gap: 8px; flex-wrap: wrap; }
+  }
+
+  /* Móvil muy pequeño (≤ 360px) */
+  @media (max-width: 360px) {
+    h1 { font-size: 14px; }
+    .top-grid { gap: 4px; }
+    .kpi-card, .insight-card { padding: 5px 6px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .controls .btn { flex: 1 1 100%; }
+  }
+
+  /* Mejoras táctiles generales para dispositivos touch */
+  @media (hover: none) and (pointer: coarse) {
+    .upload-btn, .controls .btn {
+      min-height: 40px;
+    }
+    /* Aumentar área tocable de las filas de la tabla */
+    tbody tr { cursor: pointer; }
+    /* Quitar el hover en touch para evitar estados "pegados" */
+    .upload-btn:hover { border-color: #d1d5db; background: white; color: #374151; }
+    .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div class="header-left">
+    <h1>Portal de Pronóstico de Cartera Q2 2026</h1>
+    <div class="subtitle">Tablero de pronósticos · Modificación dinámica de K, Q, R, S con recálculo de U, V, W y sugerencias para cerrar a ≤ <b id="hdr-target-dso">90</b> días <span style="margin-left:8px;font-size:9px;color:#10b981;font-weight:600;">v2.1-unidades-miles</span></div>
+  </div>
+  <div class="upload-btn-group">
+    <label class="upload-btn" id="card-cierre" title="Cierre Q2 2026 (Principal)">
+      <span class="ic">📊</span><span>Cierre Q2</span>
+      <input type="file" id="file-cierre" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-cartera" title="Cartera mes anterior (opcional)">
+      <span class="ic">📁</span><span>Cartera</span>
+      <input type="file" id="file-cartera" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-zrepo" title="ZREPO (opcional)">
+      <span class="ic">🗂️</span><span>ZREPO</span>
+      <input type="file" id="file-zrepo" accept=".xlsx,.xls">
+    </label>
+  </div>
+</div>
+
+<div id="main-content" style="display:none;">
+
+  <!-- KPIs Fila 1: TOTAL COMPAÑÍA (fija) -->
+  <div class="row-tag tag-company">TOTAL COMPAÑÍA · <span id="comp-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera">$0</div>
+      <div class="delta" id="kpi-cartera-sub">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v">$0</div>
+      <div class="delta" id="kpi-v-delta">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w">0 d</div>
+      <div class="delta" id="kpi-w-delta">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count">0</div>
+      <div class="delta" id="kpi-count-sub">con datos</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok">0</div>
+      <div class="ic-sub" id="ic-ok-sub">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn">0</div>
+      <div class="ic-sub" id="ic-warn-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk">0</div>
+      <div class="ic-sub" id="ic-risk-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit">0</div>
+      <div class="ic-sub" id="ic-crit-sub">$0</div>
+    </div>
+  </div>
+
+  <!-- KPIs Fila 2: SELECCIÓN FILTRADA (dinámica) -->
+  <div class="row-tag tag-filtered">SELECCIÓN FILTRADA · <span id="filt-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera-f">$0</div>
+      <div class="delta" id="kpi-cartera-sub-f">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v-f">$0</div>
+      <div class="delta" id="kpi-v-delta-f">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w-f">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w-f">0 d</div>
+      <div class="delta" id="kpi-w-delta-f">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count-f">0</div>
+      <div class="delta" id="kpi-count-sub-f">filtrados</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok-f">0</div>
+      <div class="ic-sub" id="ic-ok-sub-f">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn-f">0</div>
+      <div class="ic-sub" id="ic-warn-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk-f">0</div>
+      <div class="ic-sub" id="ic-risk-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit-f">0</div>
+      <div class="ic-sub" id="ic-crit-sub-f">$0</div>
+    </div>
+  </div>
+
+  <!-- Detail panel for selected client - unido visualmente con la fila filtrada arriba -->
+  <div class="detail-section" id="detail-section">
+    <div class="detail-header">
+      <h3 id="detail-title">Detalle Cliente</h3>
+      <button class="btn secondary" onclick="document.getElementById('detail-section').classList.remove('active'); state.selected=null; render();">✕ Cerrar</button>
+    </div>
+    <div class="detail-info" id="detail-info"></div>
+  </div>
+
+  <!-- Insights Banner (línea única compacta) -->
+  <div class="insights-banner" id="ib">
+    <div class="ib-icon" id="ib-icon">🎯</div>
+    <div>
+      <div class="ib-title">Estrategia Cierre Q2</div>
+      <div class="ib-headline" id="ib-headline">Meta: cerrar cartera ≤ 90d maximizando venta</div>
+    </div>
+    <div class="ib-stats">
+      <div class="ib-stat">
+        <div class="ib-lbl">Cobranza extra requerida</div>
+        <div class="ib-val" id="ib-cobranza">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls (single row) -->
+  <div class="controls">
+    <input type="text" id="search" placeholder="🔍 Buscar cliente o #...">
+    <select id="filter-controller"><option value="">Controller: Todos</option></select>
+    <select id="filter-analista"><option value="">Analista: Todos</option></select>
+    <select id="filter-status">
+      <option value="">Status: Todos</option>
+      <option value="excellent">🟢 Excelente (≤60d)</option>
+      <option value="good">🟢 OK (≤90d)</option>
+      <option value="warning">🟡 Atención (90-110)</option>
+      <option value="risk">🟠 Riesgo (110-150)</option>
+      <option value="critical">🔴 Crítico (&gt;150)</option>
+      <option value="na">— Sin venta</option>
+    </select>
+    <div class="target-control">
+      <label style="color:#92400e;">DSO meta:</label>
+      <input type="number" id="target-dso" value="90" min="1" max="365" step="1">
+    </div>
+    <button class="btn" id="btn-reset">↺ Restablecer</button>
+    <button class="btn secondary" id="btn-export">⬇ Excel</button>
+    <span class="legend-inline">
+      <span><span class="sw" style="background:#10b981"></span>≤60d</span>
+      <span><span class="sw" style="background:#34d399"></span>≤90d</span>
+      <span><span class="sw" style="background:#facc15"></span>90-110</span>
+      <span><span class="sw" style="background:#fb923c"></span>110-150</span>
+      <span><span class="sw" style="background:#ef4444"></span>&gt;150</span>
+    </span>
+    <span style="margin-left:auto; font-size:10.5px; color:#6b7280; white-space:nowrap;">
+      <b id="row-count">0</b>/<b id="row-total">0</b>
+    </span>
+  </div>
+
+  <!-- Editable Forecast Dashboard table -->
+  <div class="table-wrapper">
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th class="text">Status</th>
+          <th class="text">Cliente</th>
+          <th class="calc-col ctr">Pronóstico Cart Q2</th>
+          <th class="calc-col ctr">LTM Total</th>
+          <th class="calc-col ctr">Pronóstico DSO</th>
+          <th class="orange-col ctr">BE Q2 ✎</th>
+          <th class="orange-col ctr">Venta Neta Q2</th>
+          <th class="orange-col ctr">BE Pendiente</th>
+          <th class="yellow-col ctr">Proyect Cobrar ✎</th>
+          <th class="yellow-col ctr">Real Cobrado ✎</th>
+          <th class="yellow-col ctr">Pend Cobro ✎</th>
+          <th class="filler"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+
+</div>
+
+<div id="initial-msg" class="empty-state">
+  <div class="icon">📤</div>
+  <div style="margin-top:10px; font-size:15px;">Carga el archivo <b>Cierre Q2 2026</b> para comenzar</div>
+  <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Los otros dos archivos son opcionales (referencia)</div>
+</div>
+
+<script>
+// ============ STATE ============
+const state = {
+  rows: [],
+  filtered: [],
+  overrides: {},
+  baseValues: {},
+  selected: null,
+  targetDSO: 90,        // DSO meta global (default y para agregados)
+  dsoTargets: {},       // DSO deseable por cliente: { rowIdx: número }
+  ventaChart: null,     // Instancia Chart.js de la gráfica
+  zrepoByClientMonth: null, // { [SAP]: { '2026-04': suma, '2026-03': suma, ... } } o null si no cargado
+  zrepoByMonth: null,   // { '2026-04': suma compañía, ... } o null
+};
+// Devuelve el DSO meta efectivo para una fila: per-row si está definido, sino el global
+function getRowTarget(idx) {
+  return state.dsoTargets[idx] !== undefined ? state.dsoTargets[idx] : state.targetDSO;
+}
+
+// Registrar plugin de datalabels (silencioso si no carga)
+if (window.Chart && window.ChartDataLabels) {
+  Chart.register(window.ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { display: false });
+}
+
+// ============ FORMATTERS ============
+const fmt = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const fmtMoney = n => '$' + fmt(n);
+// Los importes internos están en MILES de pesos. Para mostrar siempre en Millones:
+// dividir entre 1,000 (equivale a /1,000,000 sobre pesos raw) y agregar " M".
+// Ejemplo: 100,000,000 pesos raw = 100,000 (miles) → /1000 = 100 → "100 M".
+const fmtM = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0 M';
+  return Math.round(n / 1000).toLocaleString('es-MX') + ' M';
+};
+// Variante para celdas que vienen en PESOS RAW directamente: divide entre 1,000,000.
+const fmtMraw = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0 M';
+  return Math.round(n / 1000000).toLocaleString('es-MX') + ' M';
+};
+const fmtMoneyM = n => '$' + fmtM(n);
+const fmtNum1 = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const num = v => {
+  if (v == null || v === '') return 0;
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+};
+
+// ============ FILE LOADING ============
+function setupUpload(inputId, cardId, callback) {
+  const input = document.getElementById(inputId);
+  const card = document.getElementById(cardId);
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      callback(wb, file.name);
+      card.classList.add('loaded');
+      card.title = '✓ ' + file.name;
+    } catch (err) {
+      card.title = '✗ Error: ' + err.message;
+      console.error(err);
+    }
+  });
+}
+
+setupUpload('file-cierre', 'card-cierre', (wb) => {
+  loadQ2(wb);
+});
+// ============ Redimensionar columnas con el mouse ============
+function setupColumnResizers() {
+  const ths = document.querySelectorAll('#data-table thead th');
+  ths.forEach((th, i) => {
+    if (th.classList.contains('filler')) return; // no agregar handle al filler
+    if (th.querySelector('.col-resizer')) return; // ya agregado
+    const handle = document.createElement('div');
+    handle.className = 'col-resizer';
+    th.appendChild(handle);
+    let startX = 0, startW = 0, active = false;
+    handle.addEventListener('mousedown', (e) => {
+      active = true;
+      startX = e.pageX;
+      startW = th.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!active) return;
+      const delta = e.pageX - startX;
+      const newW = Math.max(30, startW + delta);
+      th.style.width = newW + 'px';
+      th.style.minWidth = newW + 'px';
+      th.style.maxWidth = newW + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+      if (active) { active = false; document.body.style.cursor = ''; }
+    });
+  });
+}
+// Llamar después de que la tabla aparezca
+setTimeout(setupColumnResizers, 100);
+
+setupUpload('file-cartera', 'card-cartera', () => {});
+setupUpload('file-zrepo', 'card-zrepo', (wb) => { loadZREPO(wb); });
+
+// ============ PARSE ZREPO ============
+// El archivo tiene encabezados en la fila 6, datos desde la fila 7.
+// Columna A = Solicitante (SAP), Columna N = Fecha de factura, Columna U = Valor neto.
+function loadZREPO(wb) {
+  const sheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) return;
+  // Leer como aoa con dateNF para preservar fechas
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true, cellDates:true});
+  // Fila índice 5 (=row 6) son headers; datos desde índice 6 (=row 7)
+  const byClientMonth = {};
+  const byMonth = {};
+  for (let i = 6; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r) continue;
+    const sap = r[0];          // Col A
+    const fecha = r[13];       // Col N
+    const valNeto = r[20];     // Col U
+    if (typeof sap !== 'number' || sap <= 0) continue;
+    if (typeof valNeto !== 'number') continue;
+    let key = null;
+    if (fecha instanceof Date) {
+      key = fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'number') {
+      // Excel serial date
+      const d = new Date((fecha - 25569) * 86400 * 1000);
+      key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'string' && fecha.length >= 7) {
+      // Try parse
+      const d = new Date(fecha);
+      if (!isNaN(d)) key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    }
+    if (!key) continue;
+    if (!byClientMonth[sap]) byClientMonth[sap] = {};
+    byClientMonth[sap][key] = (byClientMonth[sap][key] || 0) + valNeto;
+    byMonth[key] = (byMonth[key] || 0) + valNeto;
+  }
+  state.zrepoByClientMonth = byClientMonth;
+  state.zrepoByMonth = byMonth;
+  // Re-render gráfica si ya hay datos
+}
+
+// ============ PARSE Q2 ============
+function loadQ2(wb) {
+  const sheet = wb.Sheets['Q2'] || wb.Sheets[wb.SheetNames[0]];
+  // Lookup desde "BE Actualizado" por SAP (col C):
+  //   F = BE Q2 26 (pesos raw)          → reemplaza K
+  //   E = Vta Neta Jul25-Mar26 (raw)    → para recalcular LTM
+  //   G = BN % (decimal)                → para recalcular LTM
+  // Fórmula de la columna J en BE Actualizado: J = (E + F*(1+G)) / 1000  (en miles)
+  const beSheet = wb.Sheets['BE Actualizado'];
+  const beLookup = {};
+  if (beSheet) {
+    const beAoa = XLSX.utils.sheet_to_json(beSheet, {header:1, defval:null, raw:true});
+    for (let i = 1; i < beAoa.length; i++) {
+      const r = beAoa[i];
+      if (!r) continue;
+      const id = r[2];   // Col C = SAP
+      if (id == null) continue;
+      beLookup[id] = {
+        F: num(r[5]),    // Col F = BE Q2 26
+        E: num(r[4]),    // Col E = Vta Neta Jul25-Mar26
+        G: num(r[6])     // Col G = BN %
+      };
+    }
+  }
+
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
+  const rows = [];
+  for (let i = 3; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r || !r[3]) continue;
+    // Excluir filas que no son clientes reales (subtotales, totales, ajustes):
+    // Solo aceptar filas con un SAP numérico positivo en la columna C.
+    const cid = r[2];
+    if (typeof cid !== 'number' || !(cid > 0)) continue;
+    const beRef = beLookup[cid]; // { F, E, G } en pesos raw (o undefined)
+    // El archivo reorganizó las columnas pero conservan los mismos nombres.
+    // Mapeo nuevo orden de columnas (índice 0-based) a nombres semánticos del código:
+    //   A=Controller(0), B=Analista(1), C=#(2), D=Nombre(3)
+    //   E=Cartera Actual(4), F=Total(5), G=Corriente(6), H=Vencido(7)
+    //   I_NEW=Cart Cierre Mes Anterior(8) — antes J  → semantic J
+    //   J_NEW=ZREPO Mes Corriente(9) — antes O       → semantic O
+    //   K_NEW=ZREPO Mes C/IVA(10) — antes P          → semantic P
+    //   L_NEW=Factor Imp(11) — antes T               → semantic T
+    //   M_NEW=Cart Pendiente al Cierre(12) — antes U → semantic U
+    //   N_NEW=Pronóstico Cart Tot al Cierre Q2(13) — antes V → semantic V
+    //   O_NEW=LTM Total(14) — antes I                → semantic I
+    //   P_NEW=Pronóstico DSO Cierre Q2(15) — antes W → semantic W
+    //   Q_NEW=BE Q2(16) — antes K                    → semantic K
+    //   R_NEW=ZREPO Q2 Actual(17) — antes L          → semantic L
+    //   S_NEW=BE Pendiente(18) — antes M             → semantic M
+    //   T_NEW=Proyectado Cobrar Q2(19) — antes Q     → semantic Q
+    //   U_NEW=Real Cobrado(20) — antes R             → semantic R
+    //   V_NEW=Pendiente de Cobro(21) — antes S       → semantic S
+    //   W_NEW=Estimado Cierre Q2(22) — antes N       → semantic N
+    const row = {
+      idx: rows.length,
+      A_controller: r[0] || '',
+      B_analista: r[1] || '',
+      C_id: cid,
+      D_nombre: r[3] || '',
+      E: num(r[4]), F: num(r[5]), G: num(r[6]), H: num(r[7]),
+      I: num(r[14]),                      // LTM Total ← new col O (idx 14)
+      J: num(r[8]),                       // Cart Mes Anterior ← new col I (idx 8)
+      K: beRef !== undefined ? beRef.F : num(r[16]),  // BE Q2 ← new col Q (idx 16)
+      L: num(r[17]),                      // ZREPO Q2 Actual ← new col R (idx 17)
+      M: num(r[18]),                      // BE Pendiente ← new col S (idx 18)
+      N: num(r[22]),                      // Estimado Cierre Q2 ← new col W (idx 22)
+      O: num(r[9]),                       // ZREPO Mes Corriente ← new col J (idx 9)
+      P: num(r[10]),                      // ZREPO Mes C/IVA ← new col K (idx 10)
+      Q: num(r[19]),                      // Proyectado a Cobrar ← new col T (idx 19)
+      R: num(r[20]),                      // Real Cobrado ← new col U (idx 20)
+      S: num(r[21]),                      // Pendiente de Cobro ← new col V (idx 21)
+      T: num(r[11]),                      // Factor Imp ← new col L (idx 11)
+      U: num(r[12]),                      // Cart Pendiente al Cierre ← new col M (idx 12)
+      V: num(r[13]),                      // Pronóstico Cart Tot Cierre Q2 ← new col N (idx 13)
+      W: num(r[15]),                      // Pronóstico DSO Cierre Q2 ← new col P (idx 15)
+      // Referencia para recalcular LTM (I) en pesos raw
+      BE_E: beRef !== undefined ? beRef.E : null,
+      BE_G: beRef !== undefined ? beRef.G : null,
+    };
+    rows.push(row);
+  }
+  state.rows = rows;
+  state.baseValues = {};
+  rows.forEach(r => {
+    state.baseValues[r.idx] = { U: r.U, V: r.V, W: r.W, K: r.K, Q: r.Q, R: r.R, S: r.S };
+  });
+  state.overrides = {};
+  initFilters();
+  document.getElementById('initial-msg').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  applyFilters();
+}
+
+// ============ COMPUTATIONS ============
+function getLive(r) {
+  const o = state.overrides[r.idx] || {};
+  const K = o.K !== undefined ? o.K : r.K;
+  const R = o.R !== undefined ? o.R : r.R;
+  let S = o.S !== undefined ? o.S : r.S;
+  let Q;
+  if (o.Q !== undefined) {
+    // Q se editó manualmente. Si S no fue editada, la derivamos: S = Q - R
+    // (mantiene la fórmula original del archivo y propaga el cambio a U/V/W/DSO)
+    Q = o.Q;
+    if (o.S === undefined) S = Q - R;
+  } else {
+    // Q se calcula automáticamente como R + S
+    Q = R + S;
+  }
+  const M = K - r.L;
+  const U = r.J + r.P - R - S;
+  const V = (M * r.T) + U;
+  // LTM (I): si hay datos en BE Actualizado, se recalcula con la fórmula equivalente a BE!J
+  let I = r.I;
+  if (r.BE_E != null && r.BE_G != null) {
+    I = r.BE_E + K * (1 + r.BE_G);
+  }
+  const W = I !== 0 ? (V / I) * 360 : 0;
+  return {K, Q, R, S, M, U, V, W, I, hasVenta: I !== 0};
+}
+
+// Status banding by DSO (recibe el target específico de la fila)
+function dsoLevel(W, hasVenta, target) {
+  target = target == null ? state.targetDSO : target;
+  if (!hasVenta) return 'na';
+  if (W <= Math.max(30, target - 30)) return 'excellent';
+  if (W <= target) return 'good';
+  if (W <= target + 20) return 'warning';
+  if (W <= target + 60) return 'risk';
+  return 'critical';
+}
+const levelLabel = {
+  excellent: '🟢 Excelente',
+  good: '🟢 OK',
+  warning: '🟡 Atención',
+  risk: '🟠 Riesgo',
+  critical: '🔴 Crítico',
+  na: '— Sin venta'
+};
+
+// Suggestion logic per client - usa el DSO meta por fila
+function getSuggestion(r, live) {
+  const target = getRowTarget(r.idx);
+  if (!live.hasVenta) {
+    return {
+      type: 'na',
+      lines: [{icon:'ℹ', text:'Sin venta LTM — no aplica DSO', amountKind:null, amount:null}],
+      cobranzaExtra: 0, ventaExtra: 0, ventaMax: 0, vTarget: 0, target
+    };
+  }
+  // V_target: cartera óptima para mantener DSO ≤ target → V_target = I * target / 360
+  const vTarget = live.I * target / 360;
+  const cobranzaExtra = Math.max(0, live.V - vTarget);
+  const iRequired = live.V * 360 / target; // venta requerida para soportar cartera actual al DSO meta
+  const ventaMaxAlMeta = vTarget * 360 / target; // = I (venta máxima soportada con cartera óptima)
+
+  const lines = [];
+  if (live.W <= target) {
+    const margenCartera = vTarget - live.V;
+    const ventaExtraSoportada = margenCartera * 360 / target;
+    lines.push({icon:'✓', text:`En meta (${target}d)`, amountKind:'pos', amount: 'DSO ' + fmtNum1(live.W) + 'd'});
+    lines.push({icon:'💰', text:'Cartera óptima máx.', amountKind:'pos', amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📈', text:'Venta extra absorbible', amountKind:'pos', amount: fmtMoneyM(Math.max(0, ventaExtraSoportada))});
+  } else {
+    lines.push({icon:'⚠', text:`Cobrar para llegar a ${target}d`, amountKind:'neg', amount: fmtMoneyM(cobranzaExtra)});
+    lines.push({icon:'💰', text:'Cartera óptima', amountKind:null, amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📊', text:'O subir venta a', amountKind:null, amount: fmtMoneyM(iRequired)});
+  }
+  return { type: live.W <= target ? 'ok' : 'over', lines, cobranzaExtra, vTarget, ventaMaxAlMeta, target };
+}
+
+// ============ FILTERS ============
+function initFilters() {
+  const controllers = [...new Set(state.rows.map(r => r.A_controller).filter(Boolean))].sort();
+  const analistas = [...new Set(state.rows.map(r => r.B_analista).filter(Boolean))].sort();
+  const fc = document.getElementById('filter-controller');
+  const fa = document.getElementById('filter-analista');
+  fc.innerHTML = '<option value="">Todos</option>' + controllers.map(c => `<option value="${c}">${c}</option>`).join('');
+  fa.innerHTML = '<option value="">Todos</option>' + analistas.map(a => `<option value="${a}">${a}</option>`).join('');
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const c = document.getElementById('filter-controller').value;
+  const a = document.getElementById('filter-analista').value;
+  const s = document.getElementById('filter-status').value;
+  state.filtered = state.rows.filter(r => {
+    if (c && r.A_controller !== c) return false;
+    if (a && r.B_analista !== a) return false;
+    if (q) {
+      const hay = (r.D_nombre + ' ' + r.C_id).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (s) {
+      const live = getLive(r);
+      if (dsoLevel(live.W, live.hasVenta, getRowTarget(r.idx)) !== s) return false;
+    }
+    return true;
+  });
+  // Ordenar de mayor a menor DSO
+  state.filtered.sort((a, b) => getLive(b).W - getLive(a).W);
+  render();
+}
+
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('filter-controller').addEventListener('change', applyFilters);
+document.getElementById('filter-analista').addEventListener('change', applyFilters);
+document.getElementById('filter-status').addEventListener('change', applyFilters);
+document.getElementById('target-dso').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value);
+  if (isNaN(v) || v < 1) return;
+  state.targetDSO = v;
+  document.getElementById('hdr-target-dso').textContent = v;
+  applyFilters();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.overrides = {};
+  state.dsoTargets = {};
+  applyFilters();
+});
+document.getElementById('btn-export').addEventListener('click', exportExcel);
+
+// ============ RENDER TABLE ============
+function render() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  state.filtered.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    const rowTarget = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+    const sug = getSuggestion(r, live);
+    const tr = document.createElement('tr');
+    tr.dataset.idx = r.idx;
+    if (state.selected === r.idx) tr.classList.add('selected');
+    const vChg = Math.abs(live.V - base.V) > 0.01;
+    const o = state.overrides[r.idx] || {};
+
+    // DSO progress bar: rango 0-200d, marcador en meta del cliente
+    const dsoMax = 200;
+    const targetPct = Math.min(100, (rowTarget / dsoMax) * 100);
+
+    const nameShort = r.D_nombre.length > 30 ? r.D_nombre.slice(0,30)+'…' : r.D_nombre;
+    const liveI = live.I;
+    const iChanged = Math.abs(liveI - r.I) > 0.01;
+    // Pronóstico DSO en vivo = (V/I)·360 (fórmula original del archivo)
+    const dsoW = liveI !== 0 ? (live.V / liveI) * 360 : 0;
+    const lvlW = dsoLevel(dsoW, liveI !== 0, rowTarget);
+    const wPct = Math.min(100, Math.max(0, (dsoW / dsoMax) * 100));
+    const wChg = Math.abs(dsoW - base.W) > 0.5;
+    tr.innerHTML = `
+      <td class="text"><span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span></td>
+      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:160px;"><b>${nameShort}</b><br><span style="font-size:8.5px;color:#9ca3af;">${r.C_id} · ${r.A_controller}</span></td>
+      <td class="calc-cell ${vChg?'changed':''}">${fmtMraw(live.V)}</td>
+      <td class="calc-cell ${iChanged?'changed':''}" title="LTM = (E + BE_Q2 × (1+BN%)) / 1000">${fmtMraw(liveI)}</td>
+      <td class="dso-cell lvl-${lvlW} ${wChg?'changed':''}" title="Pronóstico DSO = (V/I)·360">
+        <div class="dso-bar" title="DSO ${fmtNum1(dsoW)}d / meta ${rowTarget}d">
+          <div class="dso-bar-fill lvl-${lvlW}" style="width:${wPct}%"></div>
+          <div class="dso-bar-target" style="left:${targetPct}%"></div>
+        </div>
+        <span>${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}</span>
+      </td>
+      <td class="input-cell"><input type="number" class="edit ${o.K!==undefined?'changed':''}" data-field="K" data-idx="${r.idx}" value="${Math.round(live.K/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td>${fmtMraw(r.L)}</td>
+      <td class="calc-cell">${fmtMraw(live.M)}</td>
+      <td class="input-cell"><input type="number" class="edit ${o.Q!==undefined?'changed':''}" data-field="Q" data-idx="${r.idx}" value="${Math.round(live.Q/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td class="input-cell"><input type="number" class="edit ${o.R!==undefined?'changed':''}" data-field="R" data-idx="${r.idx}" value="${Math.round(live.R/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td class="input-cell"><input type="number" class="edit ${o.S!==undefined?'changed':''}" data-field="S" data-idx="${r.idx}" value="${Math.round(live.S/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td class="filler"></td>
+    `;
+    tr.addEventListener('click', (ev) => {
+      if (ev.target.tagName === 'INPUT') return;
+      state.selected = r.idx;
+      showDetail(r);
+      render();
+    });
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+
+  // Attach input listeners (campos financieros K/Q/R/S)
+  tbody.querySelectorAll('input.edit:not(.dso-target)').forEach(inp => {
+    inp.addEventListener('input', onEdit);
+    inp.addEventListener('focus', e => e.target.select());
+  });
+  // Listener para DSO deseable por fila
+  tbody.querySelectorAll('input.edit.dso-target').forEach(inp => {
+    inp.addEventListener('input', onEditDSO);
+    inp.addEventListener('focus', e => e.target.select());
+  });
+
+  document.getElementById('row-count').textContent = state.filtered.length;
+  document.getElementById('row-total').textContent = state.rows.length;
+
+  updateKPIs();
+  updateInsights();
+  updateFilteredKPIs();
+  if (state.selected != null) {
+    const r = state.rows.find(x => x.idx === state.selected);
+    if (r) showDetail(r);
+  }
+}
+
+// ============ GRÁFICA: Venta por mes vs Compañía (con etiquetas de datos) ============
+function renderVentaChart() {
+  if (!window.Chart || !state.rows.length) return;
+  const ctx = document.getElementById('chart-venta');
+  if (!ctx) return;
+
+  // Asegurar registro del plugin datalabels (si está disponible)
+  if (window.ChartDataLabels && !Chart._dlRegistered) {
+    Chart.register(window.ChartDataLabels);
+    Chart.defaults.set('plugins.datalabels', { display: false });
+    Chart._dlRegistered = true;
+  }
+
+  const focus = state.filtered.length && state.filtered.length < state.rows.length
+    ? state.filtered : state.rows;
+  const isFiltered = focus !== state.rows;
+  const focusLabel = isFiltered
+    ? (focus.length === 1 ? focus[0].D_nombre.slice(0,28) : `${focus.length} clientes`)
+    : 'Compañía';
+
+  // 12 etiquetas mes (último año, mes corriente al final) — key 'YYYY-MM' para lookup
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now = new Date();
+  const labels = [];
+  const keys = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(months[d.getMonth()]);
+    keys.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  }
+
+  let focusData, companyData, dataSource;
+  if (state.zrepoByMonth) {
+    // === Datos de ZREPO: columna U (Valor Neto) agrupados por columna N (Fecha de factura) ===
+    dataSource = 'ZREPO Vta Neta';
+    // Compañía: suma de Valor Neto por mes en todo el archivo
+    companyData = keys.map(k => state.zrepoByMonth[k] || 0);
+    // Foco: suma de Valor Neto por mes solo para los SAPs filtrados
+    if (isFiltered) {
+      const sapsFiltrados = new Set(focus.map(r => r.C_id));
+      focusData = keys.map(k => {
+        let s = 0;
+        sapsFiltrados.forEach(sap => {
+          const cm = state.zrepoByClientMonth[sap];
+          if (cm && cm[k] != null) s += cm[k];
+        });
+        return s;
+      });
+    } else {
+      focusData = companyData.slice(); // sin filtro, foco = compañía
+    }
+  } else {
+    // Fallback al cálculo previo (promedio LTM / 12)
+    dataSource = 'Promedio LTM / 12';
+    const totalCompanyAnnual = state.rows.reduce((a, r) => a + getLive(r).I, 0);
+    const focusAnnual = focus.reduce((a, r) => a + getLive(r).I, 0);
+    companyData = Array(12).fill(totalCompanyAnnual / 12);
+    focusData = Array(12).fill(focusAnnual / 12);
+  }
+
+  // Actualizar leyenda dinámica
+  const legFocus = document.getElementById('bc-leg-focus');
+  if (legFocus) legFocus.textContent = focusLabel + ' / mes — ' + dataSource;
+  const legCompany = document.getElementById('bc-leg-company');
+  if (legCompany) legCompany.textContent = (state.zrepoByMonth ? 'Compañía / mes — Vta Neta' : 'Promedio compañía / mes');
+
+  if (state.ventaChart) state.ventaChart.destroy();
+  state.ventaChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: focusLabel + ' / mes',
+          data: focusData,
+          backgroundColor: '#0891b2',
+          borderRadius: 3,
+          categoryPercentage: 0.75,
+          barPercentage: 0.92,
+          datalabels: {
+            display: true,
+            anchor: 'end', align: 'end', offset: 2,
+            font: { size: 9, weight: '700' },
+            color: '#0e7490',
+            formatter: v => fmtMraw(v)
+          }
+        },
+        {
+          label: 'Promedio compañía / mes',
+          data: companyData,
+          type: 'line',
+          borderColor: '#475569',
+          borderWidth: 2,
+          borderDash: [4, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#475569',
+          fill: false,
+          datalabels: {
+            display: ctx => ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1,
+            align: 'top', offset: 4,
+            font: { size: 9, weight: '700' },
+            color: '#1e293b',
+            formatter: v => fmtMraw(v)
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18, bottom: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => c.dataset.label + ': $' + fmtMraw(c.parsed.y) }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#475569' }, grid: { display: false } },
+        y: { display: false, beginAtZero: true, grace: '15%' }
+      }
+    }
+  });
+}
+
+function onEdit(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const field = e.target.dataset.field;
+  // El usuario captura en Millones; internamente guardamos en pesos raw. Multiplicamos por 1,000,000.
+  const rawInput = e.target.value === '' ? 0 : parseFloat(e.target.value);
+  if (isNaN(rawInput)) return;
+  const val = rawInput * 1000000;
+  if (!state.overrides[idx]) state.overrides[idx] = {};
+  // El valor base de cada campo viene directo del archivo
+  const baseField = state.baseValues[idx][field];
+  if (Math.abs(val - baseField) < 0.5) {
+    delete state.overrides[idx][field];
+    if (Object.keys(state.overrides[idx]).length === 0) delete state.overrides[idx];
+  } else {
+    state.overrides[idx][field] = val;
+  }
+  // Re-render only this row + KPIs (simpler: full re-render is fast for 161 rows)
+  // But preserve focus
+  const focusInfo = { idx, field };
+  render();
+  // Restore focus
+  const sel = document.querySelector(`input.edit[data-idx="${focusInfo.idx}"][data-field="${focusInfo.field}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+// ============ DSO Target por fila ============
+function onEditDSO(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const val = parseInt(e.target.value);
+  if (isNaN(val) || val < 1 || val > 365) return;
+  // Si coincide con el global, eliminar el override (toma el global por defecto)
+  if (val === state.targetDSO) delete state.dsoTargets[idx];
+  else state.dsoTargets[idx] = val;
+  // Re-render preservando foco
+  render();
+  const sel = document.querySelector(`input.edit.dso-target[data-idx="${idx}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+// ============ KPIs ============
+// La primera sección de KPIs siempre muestra el TOTAL COMPAÑÍA (todas las filas),
+// sin importar el filtro aplicado a la tabla.
+function updateKPIs() {
+  let totE = 0, totU = 0, totV = 0, totI = 0, totUbase = 0, totVbase = 0;
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    totE += r.E; totU += live.U; totV += live.V; totI += live.I;
+    totUbase += base.U; totVbase += base.V;
+  });
+  // DSO Global W = (Pronóstico Cart Tot al Cierre Q2 (V) / LTM Total (I)) * 360
+  const dsoLive = totI !== 0 ? (totV / totI) * 360 : 0;
+  const dsoBase = totI !== 0 ? (totVbase / totI) * 360 : 0;
+  // Importes en KPIs dividen entre 1,000,000 con sufijo " M" (fmtMraw)
+  document.getElementById('kpi-cartera').textContent = '$' + fmtMraw(totE);
+  document.getElementById('kpi-cartera-sub').textContent = state.filtered.length + ' clientes';
+  // KPI: Pronóstico Cart Tot al Cierre Q2 = total directo de la columna V del archivo (base)
+  document.getElementById('kpi-v').textContent = '$' + fmtMraw(totVbase);
+  const dV = totV - totVbase;
+  const elV = document.getElementById('kpi-v-delta');
+  elV.textContent = (dV >= 0 ? '▲+$' : '▼$') + fmtMraw(Math.abs(dV)) + ' vs escenario';
+  elV.className = 'delta ' + (Math.abs(dV) < 1 ? '' : (dV >= 0 ? 'up' : 'down'));
+  document.getElementById('kpi-w').textContent = fmtNum1(dsoLive) + ' d';
+  const dW = dsoLive - dsoBase;
+  const elW = document.getElementById('kpi-w-delta');
+  elW.textContent = (dW >= 0 ? '▲+' : '▼') + fmtNum1(Math.abs(dW)) + ' d';
+  elW.className = 'delta ' + (Math.abs(dW) < 0.05 ? '' : (dW >= 0 ? 'down' : 'up'));
+  document.getElementById('kpi-count').textContent = state.rows.length;
+  document.getElementById('kpi-cartera-sub').textContent = 'Total compañía';
+  const cc = document.getElementById('comp-count');
+  if (cc) cc.textContent = state.rows.length;
+
+  // Color DSO KPI by level (usando el global como referencia)
+  const lvl = dsoLevel(dsoLive, totI !== 0, state.targetDSO);
+  const dsoCard = document.getElementById('kpi-card-w');
+  dsoCard.className = 'kpi-card ' + (
+    lvl === 'excellent' || lvl === 'good' ? 'dso-green'
+    : lvl === 'warning' ? 'dso-yellow'
+    : lvl === 'risk' ? 'dso-orange'
+    : lvl === 'critical' ? 'dso-red'
+    : ''
+  );
+}
+
+// ============ INSIGHTS ============
+function updateInsights() {
+  const buckets = { excellent:{n:0,cart:0}, good:{n:0,cart:0}, warning:{n:0,cart:0}, risk:{n:0,cart:0}, critical:{n:0,cart:0}, na:{n:0,cart:0} };
+  let totCobranzaExtra = 0; // sum of (V - V_target) for those over
+  let totVentaExtra = 0;    // sum of capacity to grow venta for those in meta
+  let totV = 0, totI = 0;
+  // Tarjetas semáforo siempre se calculan sobre el total compañía (state.rows)
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    buckets[lvl].n++;
+    buckets[lvl].cart += live.V;
+    totV += live.V; totI += live.I;
+    if (live.hasVenta) {
+      const vTarget = live.I * tg
