@@ -486,6 +486,49 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
+  /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
+  .step-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    vertical-align: middle;
+  }
+  .num-step {
+    display: none; /* oculto por default en desktop (HTML5 native spinner está disponible) */
+    width: 22px; height: 26px;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-weight: 700;
+    color: #4b5563;
+    border-radius: 3px;
+    font-size: 14px;
+    padding: 0;
+    user-select: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .num-step:hover { background: #e5e7eb; color: #0b3d91; border-color: #0b3d91; }
+  .num-step:active { background: #d1d5db; transform: scale(0.95); }
+
+  /* En móvil/tablet: mostrar los botones +/- y agrandar input para tap fácil */
+  @media (max-width: 900px) {
+    .num-step {
+      display: inline-flex;
+      min-width: 30px; min-height: 34px;
+      font-size: 18px;
+    }
+    input.edit:not(.dso-target) {
+      font-size: 16px !important; /* 16px evita el auto-zoom de iOS al hacer focus */
+      min-height: 34px;
+      padding: 4px 6px !important;
+      width: 56px !important;
+      text-align: center;
+    }
+    .input-cell { padding: 3px 2px !important; }
+  }
+
   /* ====== ENCABEZADOS DE BLOQUE (group headers) ====== */
   thead th.group-header {
     font-size: 13px;
@@ -1171,12 +1214,12 @@ function render() {
         </div>
         <span>${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}</span>
       </td>
-      <td class="input-cell"><input type="number" class="edit ${o.K!==undefined?'changed':''}" data-field="K" data-idx="${r.idx}" value="${Math.round(live.K/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.K!==undefined?'changed':''}" data-field="K" data-idx="${r.idx}" value="${Math.round(live.K/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
       <td>${fmtMraw(r.L)}</td>
       <td class="calc-cell">${fmtMraw(live.M)}</td>
-      <td class="input-cell"><input type="number" class="edit ${o.Q!==undefined?'changed':''}" data-field="Q" data-idx="${r.idx}" value="${Math.round(live.Q/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
-      <td class="input-cell"><input type="number" class="edit ${o.R!==undefined?'changed':''}" data-field="R" data-idx="${r.idx}" value="${Math.round(live.R/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
-      <td class="input-cell"><input type="number" class="edit ${o.S!==undefined?'changed':''}" data-field="S" data-idx="${r.idx}" value="${Math.round(live.S/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.Q!==undefined?'changed':''}" data-field="Q" data-idx="${r.idx}" value="${Math.round(live.Q/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.R!==undefined?'changed':''}" data-field="R" data-idx="${r.idx}" value="${Math.round(live.R/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.S!==undefined?'changed':''}" data-field="S" data-idx="${r.idx}" value="${Math.round(live.S/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
       <td class="filler"></td>
     `;
     tr.addEventListener('click', (ev) => {
@@ -1193,6 +1236,20 @@ function render() {
   tbody.querySelectorAll('input.edit:not(.dso-target)').forEach(inp => {
     inp.addEventListener('input', onEdit);
     inp.addEventListener('focus', e => e.target.select());
+  });
+  // Botones +/- (visibles en móvil) que disparan el mismo evento input
+  tbody.querySelectorAll('.num-step').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const wrap = btn.parentElement;
+      const inp = wrap.querySelector('input.edit');
+      if (!inp) return;
+      const step = parseFloat(btn.dataset.step) || 1;
+      const cur = parseFloat(inp.value) || 0;
+      inp.value = cur + step;
+      // Disparar el evento input para que onEdit recalcule todo
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
   });
   // Listener para DSO deseable por fila
   tbody.querySelectorAll('input.edit.dso-target').forEach(inp => {
