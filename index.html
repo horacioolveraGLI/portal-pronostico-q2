@@ -488,7 +488,7 @@
 
   /* ====== LAYOUT 2 COLUMNAS: TOTAL & FILTRADA LADO A LADO ====== */
   #main-content {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 1fr 1fr;
     column-gap: 12px;
     row-gap: 3px;
@@ -517,7 +517,7 @@
   /* En tablet vertical y móvil: apilar las dos secciones nuevamente */
   @media (max-width: 900px) {
     #main-content {
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr !important;
     }
     #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
     #main-content > .top-grid:first-of-type { grid-column: 1; grid-row: 2; }
