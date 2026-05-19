@@ -44,10 +44,12 @@
   /* ====== KPI + INSIGHT COMBINED ROW ====== */
   .top-grid {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 5px;
     margin-bottom: 5px;
   }
+  /* Ocultar las tarjetas de status (semáforo) en el top-grid */
+  .top-grid .insight-card { display: none !important; }
   .kpi-card {
     background: white; border-radius: 5px; padding: 4px 7px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #0b3d91;
@@ -282,7 +284,7 @@
 
   /* Tablet horizontal y pantallas medianas (≤ 1200px) */
   @media (max-width: 1200px) {
-    .top-grid { grid-template-columns: repeat(6, 1fr); }
+    .top-grid { grid-template-columns: repeat(4, 1fr); }
     .detail-info { grid-template-columns: repeat(4, 1fr); }
   }
 
@@ -322,9 +324,9 @@
     }
     .upload-btn .ic { font-size: 14px; }
 
-    /* KPIs: 3 columnas en móvil grande */
+    /* KPIs: 2 columnas en móvil grande (4 tarjetas se ven 2x2) */
     .top-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 6px;
     }
     .kpi-card, .insight-card {
