@@ -495,8 +495,9 @@
   }
   #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
   #main-content > .row-tag.tag-filtered { grid-column: 2; grid-row: 1; margin-top: 0; }
-  #main-content > .top-grid:first-of-type { grid-column: 1; grid-row: 2; }
-  #main-content > .top-grid:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  /* Usar adjacent sibling para asegurar que el top-grid correcto va a cada columna */
+  #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
+  #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 2; grid-row: 2; }
   /* Resto de elementos ocupa el ancho completo */
   #main-content > .detail-section,
   #main-content > .insights-banner,
@@ -520,9 +521,9 @@
       grid-template-columns: 1fr !important;
     }
     #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
-    #main-content > .top-grid:first-of-type { grid-column: 1; grid-row: 2; }
+    #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
     #main-content > .row-tag.tag-filtered { grid-column: 1; grid-row: 3; margin-top: 4px; }
-    #main-content > .top-grid:nth-of-type(2) { grid-column: 1; grid-row: 4; }
+    #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 1; grid-row: 4; }
     #main-content .kpi-card .label { font-size: 9px; }
     #main-content .kpi-card .value { font-size: 13px; }
   }
