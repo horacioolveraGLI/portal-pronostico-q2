@@ -485,6 +485,48 @@
     .upload-btn:hover { border-color: #d1d5db; background: white; color: #374151; }
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
+
+  /* ====== LAYOUT 2 COLUMNAS: TOTAL & FILTRADA LADO A LADO ====== */
+  #main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+    row-gap: 3px;
+  }
+  #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+  #main-content > .row-tag.tag-filtered { grid-column: 2; grid-row: 1; margin-top: 0; }
+  #main-content > .top-grid:first-of-type { grid-column: 1; grid-row: 2; }
+  #main-content > .top-grid:nth-of-type(2) { grid-column: 2; grid-row: 2; }
+  /* Resto de elementos ocupa el ancho completo */
+  #main-content > .detail-section,
+  #main-content > .insights-banner,
+  #main-content > .controls,
+  #main-content > .table-wrapper {
+    grid-column: 1 / -1;
+  }
+  /* Ocultar la barra roja "Estrategia Cierre Q2" */
+  #main-content > .insights-banner { display: none !important; }
+
+  /* Tarjetas más compactas para el nuevo layout 2-col */
+  #main-content .top-grid { gap: 3px; }
+  #main-content .kpi-card { padding: 3px 5px; }
+  #main-content .kpi-card .label { font-size: 7.5px; letter-spacing: 0.2px; }
+  #main-content .kpi-card .value { font-size: 11px; line-height: 1.05; }
+  #main-content .kpi-card .delta { font-size: 7.5px; line-height: 1.05; }
+
+  /* En tablet vertical y móvil: apilar las dos secciones nuevamente */
+  @media (max-width: 900px) {
+    #main-content {
+      grid-template-columns: 1fr;
+    }
+    #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+    #main-content > .top-grid:first-of-type { grid-column: 1; grid-row: 2; }
+    #main-content > .row-tag.tag-filtered { grid-column: 1; grid-row: 3; margin-top: 4px; }
+    #main-content > .top-grid:nth-of-type(2) { grid-column: 1; grid-row: 4; }
+    #main-content .kpi-card .label { font-size: 9px; }
+    #main-content .kpi-card .value { font-size: 13px; }
+  }
+
 </style>
 </head>
 <body>
