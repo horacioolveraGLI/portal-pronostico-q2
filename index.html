@@ -486,6 +486,21 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
+  /* ====== ENCABEZADOS DE BLOQUE (group headers) ====== */
+  thead th.group-header {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 7px 4px;
+    text-align: center;
+    border-bottom: 2px solid rgba(255,255,255,0.35);
+  }
+  /* La segunda fila (encabezados de columna) sticky justo debajo de la primera */
+  thead tr.col-row th {
+    top: 32px;
+  }
+
   /* ====== LAYOUT 2 COLUMNAS: TOTAL & FILTRADA LADO A LADO ====== */
   #main-content {
     display: grid !important;
@@ -705,9 +720,15 @@
   <div class="table-wrapper">
     <table id="data-table">
       <thead>
-        <tr>
-          <th class="text">Status</th>
-          <th class="text">Cliente</th>
+        <tr class="group-row">
+          <th class="text" rowspan="2">Status</th>
+          <th class="text" rowspan="2">Cliente</th>
+          <th class="calc-col ctr group-header" colspan="3">Pronóstico</th>
+          <th class="orange-col ctr group-header" colspan="3">Nodo de Ventas</th>
+          <th class="yellow-col ctr group-header" colspan="3">Nodo de Cobranza</th>
+          <th class="filler" rowspan="2"></th>
+        </tr>
+        <tr class="col-row">
           <th class="calc-col ctr">Pronóstico Cart Q2</th>
           <th class="calc-col ctr">LTM Total</th>
           <th class="calc-col ctr">Pronóstico DSO</th>
@@ -717,7 +738,6 @@
           <th class="yellow-col ctr">Proyect Cobrar ✎</th>
           <th class="yellow-col ctr">Real Cobrado ✎</th>
           <th class="yellow-col ctr">Pend Cobro ✎</th>
-          <th class="filler"></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
