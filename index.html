@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -820,7 +820,7 @@
           <th class="calc-col ctr sortable" data-sort="I" title="Clic para ordenar">LTM Total</th>
           <th class="calc-col ctr sortable" data-sort="dso" title="Clic para ordenar">Pronóstico DSO</th>
           <th class="orange-col ctr sortable" data-sort="K" title="Clic para ordenar">BE Q2 ✎</th>
-          <th class="orange-col ctr sortable" data-sort="L" title="Clic para ordenar">Venta Neta Q2</th>
+          <th class="orange-col ctr sortable" data-sort="L" title="Clic para ordenar">Facturación Bruta Q2</th>
           <th class="orange-col ctr sortable" data-sort="M" title="Clic para ordenar">BE Pendiente</th>
           <th class="yellow-col ctr sortable" data-sort="Q" title="Clic para ordenar">Proyect Cobrar ✎</th>
           <th class="yellow-col ctr sortable" data-sort="R" title="Clic para ordenar">Real Cobrado ✎</th>
@@ -1782,7 +1782,7 @@ function exportExcel() {
   // Fila 2+: datos
   const aoa = [
     ['Status', 'Cliente', 'PRONÓSTICO', '', '', 'NODO DE VENTAS', '', '', 'NODO DE COBRANZA', '', ''],
-    ['', '', 'Pronóstico Cart Q2', 'LTM Total', 'Pronóstico DSO', 'BE Q2', 'Venta Neta Q2', 'BE Pendiente', 'Proyect Cobrar', 'Real Cobrado', 'Pend Cobro']
+    ['', '', 'Pronóstico Cart Q2', 'LTM Total', 'Pronóstico DSO', 'BE Q2', 'Facturación Bruta Q2', 'BE Pendiente', 'Proyect Cobrar', 'Real Cobrado', 'Pend Cobro']
   ];
 
   state.rows.forEach(r => {
@@ -1904,7 +1904,7 @@ function exportExcel() {
     {wch: 13},  // LTM Total
     {wch: 13},  // Pronóstico DSO
     {wch: 11},  // BE Q2
-    {wch: 13},  // Venta Neta Q2
+    {wch: 13},  // Facturación Bruta Q2
     {wch: 13},  // BE Pendiente
     {wch: 13},  // Proyect Cobrar
     {wch: 12},  // Real Cobrado
