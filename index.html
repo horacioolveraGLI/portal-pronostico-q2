@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 === */
+  /* === MOBILE UX V2 + ZOOM V3 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -569,10 +569,29 @@
 
   /* Tarjetas más compactas para el nuevo layout 2-col */
   #main-content .top-grid { gap: 3px; }
-  #main-content .kpi-card { padding: 3px 5px; }
-  #main-content .kpi-card .label { font-size: 7.5px; letter-spacing: 0.2px; }
-  #main-content .kpi-card .value { font-size: 11px; line-height: 1.05; }
-  #main-content .kpi-card .delta { font-size: 7.5px; line-height: 1.05; }
+  /* Variable de zoom para KPIs (controlada por los botones A+/A-) */
+  :root { --kpi-zoom: 1; }
+  #main-content .kpi-card { padding: calc(4px * var(--kpi-zoom)) calc(6px * var(--kpi-zoom)); }
+  #main-content .kpi-card .label { font-size: calc(10px * var(--kpi-zoom)); letter-spacing: 0.2px; }
+  #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .kpi-card .delta { font-size: calc(10px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .row-tag { font-size: calc(11px * var(--kpi-zoom)); padding: calc(3px * var(--kpi-zoom)) calc(10px * var(--kpi-zoom)); }
+  /* Botones de zoom */
+  .zoom-control {
+    display: inline-flex; gap: 1px; align-items: stretch;
+    border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden;
+    background: white; margin-left: 4px;
+  }
+  .zoom-control button {
+    padding: 3px 8px; background: white; border: none;
+    font-weight: 700; cursor: pointer; color: #374151;
+    line-height: 1;
+  }
+  .zoom-control button:hover { background: #eff6ff; color: #0b3d91; }
+  .zoom-control button:active { background: #dbeafe; }
+  .zoom-control #zoom-in { font-size: 14px; }
+  .zoom-control #zoom-out { font-size: 11px; }
+  .zoom-control #zoom-reset { font-size: 9px; padding: 3px 6px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
 
   /* En tablet vertical y móvil: apilar las dos secciones nuevamente */
   @media (max-width: 900px) {
@@ -583,8 +602,8 @@
     #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
     #main-content > .row-tag.tag-filtered { grid-column: 1; grid-row: 3; margin-top: 4px; }
     #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 1; grid-row: 4; }
-    #main-content .kpi-card .label { font-size: 9px; }
-    #main-content .kpi-card .value { font-size: 13px; }
+    #main-content .kpi-card .label { font-size: calc(11px * var(--kpi-zoom)); }
+    #main-content .kpi-card .value { font-size: calc(16px * var(--kpi-zoom)); }
   }
 
 </style>
@@ -748,6 +767,11 @@
     </div>
     <button class="btn" id="btn-reset">↺ Restablecer</button>
     <button class="btn secondary" id="btn-export">⬇ Excel</button>
+    <div class="zoom-control" title="Ajustar tamaño de las tarjetas KPI">
+      <button type="button" id="zoom-out" title="Reducir">A−</button>
+      <button type="button" id="zoom-reset" title="Restablecer tamaño">100%</button>
+      <button type="button" id="zoom-in" title="Aumentar">A+</button>
+    </div>
     <span class="legend-inline">
       <span><span class="sw" style="background:#10b981"></span>≤60d</span>
       <span><span class="sw" style="background:#34d399"></span>≤90d</span>
@@ -1174,6 +1198,33 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 });
 document.getElementById('btn-export').addEventListener('click', exportExcel);
 
+// ============ ZOOM DE KPIs (A+/A-/Reset) ============
+(function() {
+  const root = document.documentElement;
+  const KEY = 'kpi-zoom-v1';
+  function clamp(z) { return Math.max(0.7, Math.min(2.0, z)); }
+  function readZoom() {
+    const v = parseFloat(localStorage.getItem(KEY) || '1');
+    return isNaN(v) ? 1 : clamp(v);
+  }
+  function setZoom(z) {
+    const c = clamp(z);
+    root.style.setProperty('--kpi-zoom', c);
+    try { localStorage.setItem(KEY, c.toFixed(2)); } catch(e) {}
+    const reset = document.getElementById('zoom-reset');
+    if (reset) reset.textContent = Math.round(c * 100) + '%';
+  }
+  // Aplicar el zoom guardado al cargar
+  setZoom(readZoom());
+  // Listeners
+  const zin  = document.getElementById('zoom-in');
+  const zout = document.getElementById('zoom-out');
+  const zres = document.getElementById('zoom-reset');
+  if (zin)  zin.addEventListener('click',  () => setZoom(readZoom() + 0.1));
+  if (zout) zout.addEventListener('click', () => setZoom(readZoom() - 0.1));
+  if (zres) zres.addEventListener('click', () => setZoom(1));
+})();
+
 // ============ RENDER TABLE ============
 function render() {
   const tbody = document.getElementById('tbody');
@@ -1205,7 +1256,7 @@ function render() {
     const wChg = Math.abs(dsoW - base.W) > 0.5;
     tr.innerHTML = `
       <td class="text"><span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span></td>
-      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:160px;"><b>${nameShort}</b><br><span style="font-size:8.5px;color:#9ca3af;">${r.C_id} · ${r.A_controller}</span></td>
+      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:170px;"><b>${nameShort}</b><br><span style="font-size:8.5px;color:#9ca3af;">${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}</span></td>
       <td class="calc-cell ${vChg?'changed':''}">${fmtMraw(live.V)}</td>
       <td class="calc-cell ${iChanged?'changed':''}" title="LTM = (E + BE_Q2 × (1+BN%)) / 1000">${fmtMraw(liveI)}</td>
       <td class="dso-cell lvl-${lvlW} ${wChg?'changed':''}" title="Pronóstico DSO = (V/I)·360">
