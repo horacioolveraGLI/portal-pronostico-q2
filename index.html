@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1118,7 +1118,9 @@ function getLive(r) {
   }
   const M = K - r.L;
   const U = r.J + r.P - R - S;
-  const V = (M * r.T) + U;
+  // Factor Imp: si es 0/nulo/inválido, se usa 1 para que no anule el BE Pendiente
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const V = (M * factorT) + U;
   // LTM (I): si hay datos en BE Actualizado, se recalcula con la fórmula equivalente a BE!J
   let I = r.I;
   if (r.BE_E != null && r.BE_G != null) {
