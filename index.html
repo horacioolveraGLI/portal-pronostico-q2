@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1740,13 +1740,13 @@ function showDetail(r) {
   const info = document.getElementById('detail-info');
   info.innerHTML = `
     <div class="field"><div class="lbl">Team Leader / Controller de CXC</div><div class="val">${r.A_controller} / ${r.B_analista}</div></div>
-    <div class="field highlight"><div class="lbl">Cartera Actual Base → Nuevo</div><div class="val">${fmtMoneyM(r.E)} → <span style="color:${carteraActualLive<=r.E?'#047857':'#b91c1c'}">${fmtMoneyM(carteraActualLive)}</span></div></div>
+    <div class="field highlight"><div class="lbl">Cartera Actual</div><div class="val"><span style="color:${carteraActualLive<=r.E?'#047857':'#b91c1c'}">${fmtMoneyM(carteraActualLive)}</span></div></div>
     <div class="field"><div class="lbl">LTM Venta</div><div class="val">${fmtMoneyM(live.I)}</div></div>
     <div class="field"><div class="lbl">Cart Mes Anterior</div><div class="val">${fmtMoneyM(r.J)}</div></div>
     <div class="field"><div class="lbl">BE Pendiente</div><div class="val">${fmtMoneyM(live.M)}</div></div>
-    <div class="field highlight"><div class="lbl">Cart Pendiente Base → Nuevo</div><div class="val">${fmtMoneyM(base.U)} → <span style="color:${live.U<=base.U?'#047857':'#b91c1c'}">${fmtMoneyM(live.U)}</span></div></div>
-    <div class="field highlight"><div class="lbl">Pronóstico Cart Q2 Base → Nuevo</div><div class="val">${fmtMoneyM(base.V)} → <span style="color:${live.V<=base.V?'#047857':'#b91c1c'}">${fmtMoneyM(live.V)}</span></div></div>
-    <div class="field highlight"><div class="lbl">Pronóstico de DSO al Cierre del Q2</div><div class="val">${fmtNum1(base.W)}d → <span style="color:${live.W<=base.W?'#047857':'#b91c1c'}">${fmtNum1(live.W)}d</span></div></div>
+    <div class="field highlight"><div class="lbl">Cart Pendiente</div><div class="val"><span style="color:${live.U<=base.U?'#047857':'#b91c1c'}">${fmtMoneyM(live.U)}</span></div></div>
+    <div class="field highlight"><div class="lbl">Pronóstico Cart Q2</div><div class="val"><span style="color:${live.V<=base.V?'#047857':'#b91c1c'}">${fmtMoneyM(live.V)}</span></div></div>
+    <div class="field highlight"><div class="lbl">Pronóstico de DSO al Cierre del Q2</div><div class="val"><span style="color:${live.W<=base.W?'#047857':'#b91c1c'}">${fmtNum1(live.W)}d</span></div></div>
   `;
 }
 
