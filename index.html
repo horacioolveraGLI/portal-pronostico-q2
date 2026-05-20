@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1733,12 +1733,14 @@ function showDetail(r) {
   const sug = getSuggestion(r, live);
   const rowTarget = getRowTarget(r.idx);
   const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+  // Cartera Actual dinámica: al cobrar más (Real Cobrado sube), la cartera actual baja
+  const carteraActualLive = r.E - (live.R - r.R);
   document.getElementById('detail-section').classList.add('active');
   document.getElementById('detail-title').innerHTML = `${r.D_nombre} <span style="font-size:11px;color:#9ca3af;">(${r.C_id})</span> &nbsp; <span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span>`;
   const info = document.getElementById('detail-info');
   info.innerHTML = `
     <div class="field"><div class="lbl">Team Leader / Controller de CXC</div><div class="val">${r.A_controller} / ${r.B_analista}</div></div>
-    <div class="field"><div class="lbl">Cartera Actual</div><div class="val">${fmtMoneyM(r.E)}</div></div>
+    <div class="field highlight"><div class="lbl">Cartera Actual Base → Nuevo</div><div class="val">${fmtMoneyM(r.E)} → <span style="color:${carteraActualLive<=r.E?'#047857':'#b91c1c'}">${fmtMoneyM(carteraActualLive)}</span></div></div>
     <div class="field"><div class="lbl">LTM Venta</div><div class="val">${fmtMoneyM(live.I)}</div></div>
     <div class="field"><div class="lbl">Cart Mes Anterior</div><div class="val">${fmtMoneyM(r.J)}</div></div>
     <div class="field"><div class="lbl">BE Pendiente</div><div class="val">${fmtMoneyM(live.M)}</div></div>
