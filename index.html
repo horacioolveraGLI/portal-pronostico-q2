@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b3d91">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Portal Pronóstico Cartera Q2 2026 - GLI</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <style>
@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1660,24 +1660,183 @@ function showDetail(r) {
   `;
 }
 
-// ============ EXPORT ============
+// ============ EXPORT EXCEL (match exacto de la tabla del portal) ============
 function exportExcel() {
   if (!state.rows.length) return;
-  const data = [['Controller','Analista','#','Cliente','I_LTM','J_CartAnt','K_BE_Q2','L_ZREPO_Q2','M_Pendiente','P_ZREPO_IVA','Q_Proyectado','R_RealCobrado','S_Pendiente','T_Factor','U_CartPend','V_PronCartQ2','W_DSO_Base','W_DSO_Nuevo','Delta_DSO','DSO_Deseable','Status','Cartera_Optima','Cobranza_Extra_a_Meta','Venta_Optima_Maximizada']];
+
+  // ====== Estilos reutilizables ======
+  const borderThin = { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} };
+  const borderHeader = { top:{style:'thin',color:{rgb:'FFFFFF'}}, bottom:{style:'thin',color:{rgb:'FFFFFF'}}, left:{style:'thin',color:{rgb:'FFFFFF'}}, right:{style:'thin',color:{rgb:'FFFFFF'}} };
+
+  const styleGroupGreen  = { fill:{fgColor:{rgb:'22C55E'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupOrange = { fill:{fgColor:{rgb:'EA580C'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupYellow = { fill:{fgColor:{rgb:'FACC15'}}, font:{bold:true, color:{rgb:'422006'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupBlue   = { fill:{fgColor:{rgb:'1E3A8A'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:11}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColGreen    = { fill:{fgColor:{rgb:'86EFAC'}}, font:{bold:true, color:{rgb:'14532D'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColOrange   = { fill:{fgColor:{rgb:'FED7AA'}}, font:{bold:true, color:{rgb:'7C2D12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColYellow   = { fill:{fgColor:{rgb:'FEF08A'}}, font:{bold:true, color:{rgb:'713F12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+
+  // Colores semáforo por status
+  const statusColors = {
+    excellent: 'DCFCE7', good: 'D1FAE5', warning: 'FEF9C3',
+    risk: 'FFEDD5', critical: 'FEE2E2', na: 'F1F5F9'
+  };
+  const statusFont = {
+    excellent: '14532D', good: '065F46', warning: '854D0E',
+    risk: '9A3412', critical: '991B1B', na: '475569'
+  };
+
+  // ====== Construir AoA (Array of Arrays) ======
+  // Fila 0: encabezados de bloque
+  // Fila 1: encabezados de columna
+  // Fila 2+: datos
+  const aoa = [
+    ['Status', 'Cliente', 'PRONÓSTICO', '', '', 'NODO DE VENTAS', '', '', 'NODO DE COBRANZA', '', ''],
+    ['', '', 'Pronóstico Cart Q2', 'LTM Total', 'Pronóstico DSO', 'BE Q2', 'Venta Neta Q2', 'BE Pendiente', 'Proyect Cobrar', 'Real Cobrado', 'Pend Cobro']
+  ];
+
   state.rows.forEach(r => {
     const live = getLive(r);
-    const base = state.baseValues[r.idx];
     const tgt = getRowTarget(r.idx);
     const lvl = dsoLevel(live.W, live.hasVenta, tgt);
-    const vTarget = live.I * tgt / 360;
-    const cobranzaExtra = Math.max(0, live.V - vTarget);
-    const ventaMax = vTarget * 360 / tgt;
-    data.push([r.A_controller, r.B_analista, r.C_id, r.D_nombre, live.I, r.J, live.K, r.L, live.M, r.P, live.Q, live.R, live.S, r.T, live.U, live.V, base.W, live.W, live.W - base.W, tgt, levelLabel[lvl], vTarget, cobranzaExtra, ventaMax]);
+    const dsoDays = live.hasVenta && live.I !== 0 ? (live.V / live.I) * 360 : '';
+    const cliente = `${r.D_nombre}\n${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}`;
+    aoa.push([
+      levelLabel[lvl],
+      cliente,
+      live.V / 1000000,
+      live.I / 1000000,
+      dsoDays,
+      live.K / 1000000,
+      r.L / 1000000,
+      live.M / 1000000,
+      live.Q / 1000000,
+      live.R / 1000000,
+      live.S / 1000000
+    ]);
   });
-  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ====== Aplicar estilos ======
+  // Fila 0 (encabezados de bloque)
+  const setStyle = (r, c, style) => {
+    const addr = XLSX.utils.encode_cell({r, c});
+    if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+    ws[addr].s = style;
+  };
+  // Status y Cliente: azul oscuro (ocupan ambas filas)
+  setStyle(0, 0, styleGroupBlue);
+  setStyle(0, 1, styleGroupBlue);
+  // PRONÓSTICO (verde)
+  for (let c = 2; c <= 4; c++) setStyle(0, c, styleGroupGreen);
+  // NODO DE VENTAS (naranja)
+  for (let c = 5; c <= 7; c++) setStyle(0, c, styleGroupOrange);
+  // NODO DE COBRANZA (amarillo)
+  for (let c = 8; c <= 10; c++) setStyle(0, c, styleGroupYellow);
+
+  // Fila 1 (encabezados de columna)
+  setStyle(1, 0, styleGroupBlue);
+  setStyle(1, 1, styleGroupBlue);
+  for (let c = 2; c <= 4; c++) setStyle(1, c, styleColGreen);
+  for (let c = 5; c <= 7; c++) setStyle(1, c, styleColOrange);
+  for (let c = 8; c <= 10; c++) setStyle(1, c, styleColYellow);
+
+  // Filas de datos
+  state.rows.forEach((r, i) => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    const rowIdx = 2 + i;
+    const statusBg = statusColors[lvl] || 'FFFFFF';
+    const statusTxt = statusFont[lvl] || '111827';
+
+    // Status
+    setStyle(rowIdx, 0, {
+      fill: {fgColor:{rgb: statusBg}},
+      font: {bold:true, color:{rgb: statusTxt}, sz:10},
+      alignment: {horizontal:'center', vertical:'center'},
+      border: borderThin
+    });
+    // Cliente
+    setStyle(rowIdx, 1, {
+      font: {sz:10},
+      alignment: {horizontal:'left', vertical:'center', wrapText:true},
+      border: borderThin
+    });
+    // Columnas verdes (Pronóstico) - fondo verde claro
+    for (let c = 2; c <= 4; c++) {
+      const cellStyle = {
+        fill: {fgColor:{rgb: c === 4 ? statusBg : 'F0FDF4'}},
+        font: {sz:10, bold: c === 4, color: c === 4 ? {rgb: statusTxt} : {rgb:'111827'}},
+        alignment: {horizontal: c === 4 ? 'center' : 'right', vertical:'center'},
+        border: borderThin,
+        numFmt: c === 4 ? '#,##0" d"' : '#,##0.0" M"'
+      };
+      setStyle(rowIdx, c, cellStyle);
+    }
+    // Columnas naranjas (Ventas) - fondo amber
+    for (let c = 5; c <= 7; c++) {
+      setStyle(rowIdx, c, {
+        fill: {fgColor:{rgb: 'FFFBEB'}},
+        font: {sz:10},
+        alignment: {horizontal:'right', vertical:'center'},
+        border: borderThin,
+        numFmt: '#,##0.0" M"'
+      });
+    }
+    // Columnas amarillas (Cobranza) - fondo amarillo muy claro
+    for (let c = 8; c <= 10; c++) {
+      setStyle(rowIdx, c, {
+        fill: {fgColor:{rgb: 'FEFCE8'}},
+        font: {sz:10},
+        alignment: {horizontal:'right', vertical:'center'},
+        border: borderThin,
+        numFmt: '#,##0.0" M"'
+      });
+    }
+  });
+
+  // ====== Merges (encabezados de bloque) ======
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:1,c:0}},   // Status (2 filas)
+    {s:{r:0,c:1}, e:{r:1,c:1}},   // Cliente (2 filas)
+    {s:{r:0,c:2}, e:{r:0,c:4}},   // PRONÓSTICO
+    {s:{r:0,c:5}, e:{r:0,c:7}},   // NODO DE VENTAS
+    {s:{r:0,c:8}, e:{r:0,c:10}}   // NODO DE COBRANZA
+  ];
+
+  // ====== Anchos de columna ======
+  ws['!cols'] = [
+    {wch: 13},  // Status
+    {wch: 50},  // Cliente
+    {wch: 14},  // Pronóstico Cart Q2
+    {wch: 13},  // LTM Total
+    {wch: 13},  // Pronóstico DSO
+    {wch: 11},  // BE Q2
+    {wch: 13},  // Venta Neta Q2
+    {wch: 13},  // BE Pendiente
+    {wch: 13},  // Proyect Cobrar
+    {wch: 12},  // Real Cobrado
+    {wch: 12}   // Pend Cobro
+  ];
+
+  // ====== Alturas de fila ======
+  const rowHeights = [
+    {hpt: 24},  // Encabezado de bloque
+    {hpt: 36}   // Encabezado de columna
+  ];
+  for (let i = 0; i < state.rows.length; i++) rowHeights.push({hpt: 28});
+  ws['!rows'] = rowHeights;
+
+  // ====== Congelar paneles (primeras 2 filas y primeras 2 columnas) ======
+  ws['!freeze'] = { xSplit: 2, ySplit: 2 };
+
+  // ====== Crear workbook y descargar ======
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Pronostico Q2');
-  XLSX.writeFile(wb, 'Pronostico_Q2_Escenario.xlsx');
+  XLSX.utils.book_append_sheet(wb, ws, 'Pronóstico Q2');
+  const fechaArchivo = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Pronostico_Cartera_Q2_${fechaArchivo}.xlsx`);
 }
 
 // ============ DATOS PRECARGADOS (generados 18/05/2026 23:22) ============
