@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -861,8 +861,18 @@ const fmtM = n => {
 };
 // Variante para celdas que vienen en PESOS RAW directamente: divide entre 1,000,000.
 const fmtMraw = n => {
-  if (n == null || isNaN(n) || !isFinite(n)) return '0 M';
-  return Math.round(n / 1000000).toLocaleString('es-MX') + ' M';
+  if (n == null || isNaN(n) || !isFinite(n)) return '0.0 M';
+  const abs = Math.abs(n);
+  // >= 1 millón: mostrar X.X M (1 decimal)
+  if (abs >= 1000000) {
+    return (n / 1000000).toLocaleString('es-MX', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' M';
+  }
+  // >= 1 mil: mostrar X K (sin decimales)
+  if (abs >= 1000) {
+    return Math.round(n / 1000).toLocaleString('es-MX') + ' K';
+  }
+  // < 1 mil: mostrar 0.0 M (consistente con el formato general)
+  return '0.0 M';
 };
 const fmtMoneyM = n => '$' + fmtM(n);
 const fmtNum1 = n => {
@@ -1704,15 +1714,15 @@ function exportExcel() {
     aoa.push([
       levelLabel[lvl],
       cliente,
-      live.V / 1000000,
-      live.I / 1000000,
+      live.V,
+      live.I,
       dsoDays,
-      live.K / 1000000,
-      r.L / 1000000,
-      live.M / 1000000,
-      live.Q / 1000000,
-      live.R / 1000000,
-      live.S / 1000000
+      live.K,
+      r.L,
+      live.M,
+      live.Q,
+      live.R,
+      live.S
     ]);
   });
 
@@ -1771,7 +1781,7 @@ function exportExcel() {
         font: {sz:10, bold: c === 4, color: c === 4 ? {rgb: statusTxt} : {rgb:'111827'}},
         alignment: {horizontal: c === 4 ? 'center' : 'right', vertical:'center'},
         border: borderThin,
-        numFmt: c === 4 ? '#,##0" d"' : '#,##0.0" M"'
+        numFmt: c === 4 ? '#,##0" d"' : '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
       };
       setStyle(rowIdx, c, cellStyle);
     }
@@ -1782,7 +1792,7 @@ function exportExcel() {
         font: {sz:10},
         alignment: {horizontal:'right', vertical:'center'},
         border: borderThin,
-        numFmt: '#,##0.0" M"'
+        numFmt: '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
       });
     }
     // Columnas amarillas (Cobranza) - fondo amarillo muy claro
@@ -1792,7 +1802,7 @@ function exportExcel() {
         font: {sz:10},
         alignment: {horizontal:'right', vertical:'center'},
         border: borderThin,
-        numFmt: '#,##0.0" M"'
+        numFmt: '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
       });
     }
   });
