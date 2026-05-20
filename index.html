@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -529,6 +529,25 @@
     }
     .input-cell { padding: 3px 2px !important; }
   }
+
+  /* ====== ORDENAMIENTO DE COLUMNAS (clic en encabezados) ====== */
+  thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.15s;
+  }
+  thead th.sortable:hover { filter: brightness(0.88); }
+  thead th.sortable::after {
+    content: ' ⇅';
+    font-size: 10px;
+    opacity: 0.45;
+    margin-left: 3px;
+  }
+  thead th.sortable.sorted-asc::after  { content: ' ▲'; opacity: 1; color: #fde68a; }
+  thead th.sortable.sorted-desc::after { content: ' ▼'; opacity: 1; color: #fde68a; }
+  /* En columnas amarillas, usar color oscuro para el indicador activo */
+  thead th.yellow-col.sortable.sorted-asc::after,
+  thead th.yellow-col.sortable.sorted-desc::after { color: #7c2d12; }
 
   /* ====== ENCABEZADOS DE BLOQUE (group headers) ====== */
   thead th.group-header {
@@ -789,23 +808,23 @@
     <table id="data-table">
       <thead>
         <tr class="group-row">
-          <th class="text" rowspan="2">Status</th>
-          <th class="text" rowspan="2">Cliente</th>
+          <th class="text sortable" rowspan="2" data-sort="status" title="Clic para ordenar">Status</th>
+          <th class="text sortable" rowspan="2" data-sort="cliente" title="Clic para ordenar">Cliente</th>
           <th class="calc-col ctr group-header" colspan="3">Pronóstico</th>
           <th class="orange-col ctr group-header" colspan="3">Nodo de Ventas</th>
           <th class="yellow-col ctr group-header" colspan="3">Nodo de Cobranza</th>
           <th class="filler" rowspan="2"></th>
         </tr>
         <tr class="col-row">
-          <th class="calc-col ctr">Pronóstico Cart Q2</th>
-          <th class="calc-col ctr">LTM Total</th>
-          <th class="calc-col ctr">Pronóstico DSO</th>
-          <th class="orange-col ctr">BE Q2 ✎</th>
-          <th class="orange-col ctr">Venta Neta Q2</th>
-          <th class="orange-col ctr">BE Pendiente</th>
-          <th class="yellow-col ctr">Proyect Cobrar ✎</th>
-          <th class="yellow-col ctr">Real Cobrado ✎</th>
-          <th class="yellow-col ctr">Pend Cobro ✎</th>
+          <th class="calc-col ctr sortable" data-sort="V" title="Clic para ordenar">Pronóstico Cart Q2</th>
+          <th class="calc-col ctr sortable" data-sort="I" title="Clic para ordenar">LTM Total</th>
+          <th class="calc-col ctr sortable" data-sort="dso" title="Clic para ordenar">Pronóstico DSO</th>
+          <th class="orange-col ctr sortable" data-sort="K" title="Clic para ordenar">BE Q2 ✎</th>
+          <th class="orange-col ctr sortable" data-sort="L" title="Clic para ordenar">Venta Neta Q2</th>
+          <th class="orange-col ctr sortable" data-sort="M" title="Clic para ordenar">BE Pendiente</th>
+          <th class="yellow-col ctr sortable" data-sort="Q" title="Clic para ordenar">Proyect Cobrar ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="R" title="Clic para ordenar">Real Cobrado ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="S" title="Clic para ordenar">Pend Cobro ✎</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -834,6 +853,8 @@ const state = {
   ventaChart: null,     // Instancia Chart.js de la gráfica
   zrepoByClientMonth: null, // { [SAP]: { '2026-04': suma, '2026-03': suma, ... } } o null si no cargado
   zrepoByMonth: null,   // { '2026-04': suma compañía, ... } o null
+  sortField: null,      // Campo de ordenamiento elegido por el usuario (null = default DSO desc)
+  sortDir: 'asc',       // 'asc' o 'desc'
 };
 // Devuelve el DSO meta efectivo para una fila: per-row si está definido, sino el global
 function getRowTarget(idx) {
@@ -1185,8 +1206,38 @@ function applyFilters() {
     }
     return true;
   });
-  // Ordenar de mayor a menor DSO
-  state.filtered.sort((a, b) => getLive(b).W - getLive(a).W);
+  // Ordenamiento: si el usuario eligió un campo, usa ese; sino default por DSO descendente
+  if (state.sortField) {
+    const field = state.sortField;
+    const dir = state.sortDir === 'desc' ? -1 : 1;
+    const lvlOrder = { excellent:1, good:2, warning:3, risk:4, critical:5, na:6 };
+    state.filtered.sort((a, b) => {
+      let va, vb;
+      if (field === 'status') {
+        va = lvlOrder[dsoLevel(getLive(a).W, getLive(a).hasVenta, getRowTarget(a.idx))] || 99;
+        vb = lvlOrder[dsoLevel(getLive(b).W, getLive(b).hasVenta, getRowTarget(b.idx))] || 99;
+      } else if (field === 'cliente') {
+        va = (a.D_nombre || '').toLowerCase();
+        vb = (b.D_nombre || '').toLowerCase();
+      } else if (field === 'dso') {
+        const liveA = getLive(a), liveB = getLive(b);
+        va = liveA.hasVenta && liveA.I !== 0 ? (liveA.V / liveA.I) * 360 : -1;
+        vb = liveB.hasVenta && liveB.I !== 0 ? (liveB.V / liveB.I) * 360 : -1;
+      } else if (field === 'L') {
+        va = a.L; vb = b.L;
+      } else {
+        // Campos de getLive: V, I, K, M, Q, R, S
+        va = getLive(a)[field];
+        vb = getLive(b)[field];
+      }
+      if (va < vb) return -1 * dir;
+      if (va > vb) return  1 * dir;
+      return 0;
+    });
+  } else {
+    // Default: DSO descendente
+    state.filtered.sort((a, b) => getLive(b).W - getLive(a).W);
+  }
   render();
 }
 
@@ -1207,6 +1258,31 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   applyFilters();
 });
 document.getElementById('btn-export').addEventListener('click', exportExcel);
+
+// ============ ORDENAMIENTO DE COLUMNAS ============
+function updateSortIndicators() {
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (state.sortField === th.dataset.sort) {
+      th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+document.querySelectorAll('thead th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.dataset.sort;
+    if (state.sortField === field) {
+      // 3 estados cíclicos: asc → desc → ninguno (default DSO desc)
+      if (state.sortDir === 'asc') state.sortDir = 'desc';
+      else { state.sortField = null; state.sortDir = 'asc'; }
+    } else {
+      state.sortField = field;
+      state.sortDir = 'asc';
+    }
+    updateSortIndicators();
+    applyFilters();
+  });
+});
 
 // ============ ZOOM DE KPIs (A+/A-/Reset) ============
 (function() {
