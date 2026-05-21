@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 + KPI-CART V11 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 + KPI-CART V12 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1588,8 +1588,9 @@ function updateKPIs() {
   state.rows.forEach(r => {
     const live = getLive(r);
     const base = state.baseValues[r.idx];
-    // KPI-CART V11: cartera dinámica = E − (incremento de Real Cobrado), igual que el detalle del cliente
-    totE += (r.E - (live.R - r.R)); totU += live.U; totV += live.V; totI += live.I;
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
     totUbase += base.U; totVbase += base.V;
   });
   // DSO Global W = (Pronóstico Cart Tot al Cierre Q2 (V) / LTM Total (I)) * 360
@@ -1687,8 +1688,9 @@ function updateFilteredKPIs() {
     const base = state.baseValues[r.idx];
     const tgt = getRowTarget(r.idx);
     const lvl = dsoLevel(live.W, live.hasVenta, tgt);
-    // KPI-CART V11: cartera dinámica = E − (incremento de Real Cobrado), igual que el detalle del cliente
-    totE += (r.E - (live.R - r.R)); totU += live.U; totV += live.V; totI += live.I;
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
     totVbase += base.V;
     buckets[lvl].n++; buckets[lvl].cart += live.V;
   });
@@ -1735,8 +1737,9 @@ function showDetail(r) {
   const sug = getSuggestion(r, live);
   const rowTarget = getRowTarget(r.idx);
   const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
-  // Cartera Actual dinámica: al cobrar más (Real Cobrado sube), la cartera actual baja
-  const carteraActualLive = r.E - (live.R - r.R);
+  // Cartera Actual dinámica (KPI-CART V12): al cobrar más baja; al subir BE Q2 sube (× Factor de impuesto)
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const carteraActualLive = r.E - (live.R - r.R) + (live.K - r.K) * factorT;
   document.getElementById('detail-section').classList.add('active');
   document.getElementById('detail-title').innerHTML = `${r.D_nombre} <span style="font-size:11px;color:#9ca3af;">(${r.C_id})</span> &nbsp; <span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span>`;
   const info = document.getElementById('detail-info');
