@@ -486,7 +486,7 @@
     .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
   }
 
-  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 === */
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 + KPI-CART V11 === */
   /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
   .step-wrap {
     display: inline-flex;
@@ -1588,7 +1588,8 @@ function updateKPIs() {
   state.rows.forEach(r => {
     const live = getLive(r);
     const base = state.baseValues[r.idx];
-    totE += r.E; totU += live.U; totV += live.V; totI += live.I;
+    // KPI-CART V11: cartera dinámica = E − (incremento de Real Cobrado), igual que el detalle del cliente
+    totE += (r.E - (live.R - r.R)); totU += live.U; totV += live.V; totI += live.I;
     totUbase += base.U; totVbase += base.V;
   });
   // DSO Global W = (Pronóstico Cart Tot al Cierre Q2 (V) / LTM Total (I)) * 360
@@ -1686,7 +1687,8 @@ function updateFilteredKPIs() {
     const base = state.baseValues[r.idx];
     const tgt = getRowTarget(r.idx);
     const lvl = dsoLevel(live.W, live.hasVenta, tgt);
-    totE += r.E; totU += live.U; totV += live.V; totI += live.I;
+    // KPI-CART V11: cartera dinámica = E − (incremento de Real Cobrado), igual que el detalle del cliente
+    totE += (r.E - (live.R - r.R)); totU += live.U; totV += live.V; totI += live.I;
     totVbase += base.V;
     buckets[lvl].n++; buckets[lvl].cart += live.V;
   });
