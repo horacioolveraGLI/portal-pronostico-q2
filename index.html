@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d91">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Portal Pronóstico Cartera Q2 2026 - GLI</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #eef2f7; color: #1f2937; padding: 6px 8px; }
+  h1 { color: #0b3d91; font-size: 14px; margin-bottom: 0; line-height: 1.2; }
+  .subtitle { color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+
+  /* ====== HEADER ====== */
+  .header-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px; gap: 8px;
+  }
+  .header-left { flex: 1; }
+  .upload-btn-group { display: flex; gap: 3px; align-items: center; }
+  .upload-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px;
+    background: white; cursor: pointer; font-size: 10px; color: #374151;
+    transition: all 0.15s; font-weight: 500;
+  }
+  .upload-btn:hover { border-color: #0b3d91; background: #eff6ff; color: #0b3d91; }
+  .upload-btn.loaded { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  .upload-btn .ic { font-size: 11px; }
+  .upload-btn input[type=file] { display: none; }
+
+  /* ====== ETIQUETAS DE FILA ====== */
+  .row-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px; margin-bottom: 3px; display: inline-block;
+  }
+  .tag-company { background: #0b3d91; color: white; }
+  .tag-filtered { background: #b45309; color: white; margin-top: 4px; }
+
+  /* ====== KPI + INSIGHT COMBINED ROW ====== */
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+  /* Ocultar las tarjetas de status (semáforo) en el top-grid */
+  .top-grid .insight-card { display: none !important; }
+  .kpi-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #0b3d91;
+    min-width: 0; overflow: hidden;
+  }
+  .kpi-card .label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .delta { font-size: 9px; line-height: 1.1; }
+  .kpi-card .delta.up { color: #047857; font-weight: 600; }
+  .kpi-card .delta.down { color: #b91c1c; font-weight: 600; }
+  .kpi-card.k2 { border-left-color: #0891b2; }
+  .kpi-card.k3 { border-left-color: #ca8a04; }
+  .kpi-card.k4 { border-left-color: #db2777; }
+  .kpi-card.k5 { border-left-color: #7c3aed; }
+  .kpi-card.dso-green { background: linear-gradient(135deg, #ecfdf5 0%, white 60%); border-left-color: #10b981; }
+  .kpi-card.dso-yellow { background: linear-gradient(135deg, #fefce8 0%, white 60%); border-left-color: #eab308; }
+  .kpi-card.dso-orange { background: linear-gradient(135deg, #fff7ed 0%, white 60%); border-left-color: #f97316; }
+  .kpi-card.dso-red { background: linear-gradient(135deg, #fef2f2 0%, white 60%); border-left-color: #dc2626; }
+
+  /* Insight semáforo cards (compactos, en la misma fila que KPIs) */
+  .insight-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #6b7280;
+    min-width: 0; overflow: hidden;
+  }
+  .insight-card.success { border-left-color: #10b981; background: linear-gradient(135deg, #ecfdf5 0%, white 60%); }
+  .insight-card.warning { border-left-color: #f59e0b; background: linear-gradient(135deg, #fefce8 0%, white 60%); }
+  .insight-card.danger { border-left-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, white 60%); }
+  .insight-card .ic-label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .insight-card .ic-value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; }
+  .insight-card .ic-sub { font-size: 9px; color: #4b5563; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ====== GRÁFICA INFERIOR (Venta mensual vs compañía) ====== */
+  .bottom-chart-wrap {
+    background: white; border-radius: 8px; padding: 10px 14px; margin-top: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .bottom-chart-wrap .bc-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .bottom-chart-wrap .bc-title {
+    font-size: 12px; font-weight: 700; color: #0b3d91; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .bottom-chart-wrap .bc-legend { display: flex; gap: 14px; font-size: 11px; color: #374151; }
+  .bottom-chart-wrap .bc-legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .bottom-chart-wrap .bc-canvas { width: 100%; height: 200px; position: relative; }
+
+  /* ====== INSIGHTS BANNER - ahora compacto a una sola línea ====== */
+  .insights-banner {
+    background: linear-gradient(90deg, #0b3d91 0%, #1e40af 100%);
+    color: white; border-radius: 6px; padding: 6px 12px; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(11,61,145,0.15);
+    font-size: 11px;
+  }
+  .insights-banner .ib-icon { font-size: 20px; }
+  .insights-banner .ib-title { font-size: 9px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+  .insights-banner .ib-headline { font-size: 12px; font-weight: 600; line-height: 1.2; }
+  .insights-banner .ib-stats { display: flex; gap: 14px; margin-left: auto; }
+  .insights-banner .ib-stat .ib-lbl { font-size: 8.5px; opacity: 0.8; text-transform: uppercase; }
+  .insights-banner .ib-stat .ib-val { font-size: 13px; font-weight: 700; }
+
+  /* ====== CONTROLS ====== */
+  .controls {
+    background: white; border-radius: 6px; padding: 5px 8px; margin-bottom: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+    display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;
+    overflow-x: auto;
+  }
+  .controls label { font-size: 10.5px; color: #374151; font-weight: 600; white-space: nowrap; }
+  .controls input[type=text], .controls select {
+    padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 11px;
+  }
+  .controls input[type=text] { min-width: 140px; }
+  .controls .btn {
+    background: #0b3d91; color: white; padding: 3px 9px; border: none;
+    border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;
+  }
+  .controls .btn:hover { background: #093680; }
+  .controls .btn.secondary { background: #6b7280; }
+  .controls .btn.secondary:hover { background: #4b5563; }
+  .controls .target-control {
+    display: flex; align-items: center; gap: 4px; padding: 2px 7px;
+    background: #fef3c7; border: 1px solid #fbbf24; border-radius: 4px;
+  }
+  .controls .target-control input { width: 44px; padding: 1px 4px; border: 1px solid #d97706; border-radius: 3px; font-size: 11px; text-align: center; }
+  .controls .legend-inline { display: inline-flex; gap: 8px; font-size: 9.5px; color: #4b5563; align-items: center; margin-left: 6px; }
+  .controls .legend-inline .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 3px; vertical-align: middle; }
+
+  /* ====== TABLE ====== */
+  .table-wrapper {
+    background: white; border-radius: 6px; padding: 0; margin-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: auto; max-height: calc(73vh);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; table-layout: auto; }
+  thead th {
+    background: #1e3a8a;  /* AZUL MARINO (default: Status, Cliente) */
+    color: white; padding: 5px 4px; text-align: center;
+    position: sticky; top: 0; z-index: 10; font-size: 10.5px; white-space: normal;
+    border-right: 1px solid rgba(255,255,255,0.1); line-height: 1.15;
+    font-weight: 700; width: 1%;
+  }
+  /* Handle para redimensionar columnas con el mouse */
+  thead th .col-resizer {
+    position: absolute; top: 0; right: 0; width: 6px; height: 100%;
+    cursor: col-resize; user-select: none; z-index: 11;
+    background: transparent;
+  }
+  thead th .col-resizer:hover { background: rgba(255,255,255,0.25); }
+  thead th.text { text-align: left; width: 1%; }
+  thead th.ctr { text-align: center; }
+  thead th.calc-col   { background: #22c55e; }            /* VERDE BANDERA CLARO */
+  thead th.orange-col { background: #ea580c; }            /* NARANJA */
+  thead th.yellow-col { background: #facc15; color: #422006; } /* AMARILLO con texto oscuro */
+  thead th.sugg-col   { background: #7c3aed; }
+  /* Columna filler que absorbe el espacio sobrante a la derecha */
+  thead th.filler, tbody td.filler {
+    background: transparent !important; border: none !important;
+    width: auto; padding: 0;
+  }
+  tbody td {
+    padding: 4px 5px; border-bottom: 1px solid #e5e7eb; text-align: center;
+    white-space: nowrap; vertical-align: middle; font-size: 13px; font-weight: 500;
+  }
+  tbody td.text { text-align: left; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  tbody tr:hover td { background: #f9fafb; }
+  tbody tr.selected td { background: #fef3c7 !important; }
+  tbody td.input-cell { background: #fffbeb; padding: 2px 4px; }
+  tbody td.calc-cell { background: #f0fdf4; font-weight: 700; }
+  tbody td.calc-cell.changed { background: #fde68a; color: #92400e; }
+
+  /* DSO traffic light cell */
+  td.dso-cell { font-weight: 700; text-align: center; font-size: 13px; }
+  td.dso-cell.lvl-excellent { background: #dcfce7; color: #14532d; }
+  td.dso-cell.lvl-good { background: #d1fae5; color: #065f46; }
+  td.dso-cell.lvl-warning { background: #fef9c3; color: #854d0e; }
+  td.dso-cell.lvl-risk { background: #ffedd5; color: #9a3412; }
+  td.dso-cell.lvl-critical { background: #fee2e2; color: #991b1b; }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px;
+    border-radius: 9px; font-size: 9px; font-weight: 700; letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .status-badge.lvl-excellent { background: #10b981; color: white; }
+  .status-badge.lvl-good { background: #34d399; color: #064e3b; }
+  .status-badge.lvl-warning { background: #facc15; color: #713f12; }
+  .status-badge.lvl-risk { background: #fb923c; color: #7c2d12; }
+  .status-badge.lvl-critical { background: #ef4444; color: white; }
+  .status-badge.lvl-na { background: #cbd5e1; color: #475569; }
+
+  /* DSO progress bar in row */
+  .dso-bar {
+    display: inline-block; width: 38px; height: 6px; background: #e5e7eb;
+    border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 3px;
+    position: relative;
+  }
+  .dso-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .dso-bar-fill.lvl-excellent { background: #10b981; }
+  .dso-bar-fill.lvl-good { background: #34d399; }
+  .dso-bar-fill.lvl-warning { background: #facc15; }
+  .dso-bar-fill.lvl-risk { background: #fb923c; }
+  .dso-bar-fill.lvl-critical { background: #ef4444; }
+  .dso-bar-target {
+    position: absolute; top:-1px; bottom:-1px; width: 2px; background: #1e40af;
+    box-shadow: 0 0 0 1px white;
+  }
+
+  /* Suggestion cell */
+  td.sugg-cell {
+    background: linear-gradient(90deg, #faf5ff 0%, white 100%);
+    text-align: left; font-size: 9.5px; line-height: 1.2; min-width: 200px;
+    padding: 2px 4px;
+  }
+  td.sugg-cell .sugg-line {
+    display: flex; align-items: center; gap: 3px; margin-bottom: 1px;
+  }
+  td.sugg-cell .sugg-line:last-child { margin-bottom: 0; }
+  td.sugg-cell .sugg-amount {
+    font-weight: 700; padding: 0px 4px; border-radius: 2px;
+    background: rgba(124,58,237,0.1); color: #6d28d9;
+  }
+  td.sugg-cell .sugg-amount.pos { background: rgba(16,185,129,0.13); color: #047857; }
+  td.sugg-cell .sugg-amount.neg { background: rgba(220,38,38,0.13); color: #b91c1c; }
+
+  input.edit {
+    width: 50px; border: 1px solid #d1d5db; border-radius: 3px; padding: 1px 3px;
+    text-align: right; font-size: 12px; font-weight: 600; background: white;
+  }
+  input.edit:focus { outline: 1.5px solid #0b3d91; border-color: #0b3d91; }
+  input.edit.changed { background: #fef08a; }
+  input.edit.dso-target { width: 42px; }
+  .m-suffix {
+    display: inline-block; font-size: 9px; color: #b45309; font-weight: 700;
+    margin-left: 2px; vertical-align: middle;
+  }
+
+  /* ====== DETAIL SECTION ====== */
+  .detail-section {
+    background: white; border-radius: 8px; padding: 8px 10px; margin-top: -2px; margin-bottom: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: none;
+    border-top: 3px solid #b45309; /* color ámbar para hilarlo con la fila "Selección Filtrada" */
+  }
+  .detail-section.active { display: block; }
+  .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .detail-header h3 { color: #0b3d91; font-size: 13px; }
+  .detail-info { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .detail-info .field { padding: 4px 7px; background: #f9fafb; border-radius: 4px; border-left: 3px solid #cbd5e1; min-width: 0; }
+  .detail-info .field.highlight { border-left-color: #0b3d91; background: #eff6ff; }
+  .detail-info .field .lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail-info .field .val { font-size: 12px; font-weight: 700; color: #111827; margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+  .empty-state .icon { font-size: 48px; }
+
+  /* Legend below banner */
+  .legend-row {
+    display: flex; gap: 16px; font-size: 11px; color: #4b5563;
+    align-items: center; flex-wrap: wrap;
+  }
+  .legend-row .lg {
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .legend-row .sw {
+    display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  }
+
+  /* ============================================================== */
+  /* ====== RESPONSIVE / ADAPTACIÓN MÓVIL Y TABLET            ====== */
+  /* ============================================================== */
+
+  /* Tablet horizontal y pantallas medianas (≤ 1200px) */
+  @media (max-width: 1200px) {
+    .top-grid { grid-template-columns: repeat(4, 1fr); }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* Tablet (≤ 1024px) */
+  @media (max-width: 1024px) {
+    body { padding: 6px; }
+    .top-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+    .insights-banner { flex-wrap: wrap; }
+    .insights-banner .ib-stats { margin-left: 0; width: 100%; justify-content: flex-start; }
+  }
+
+  /* Tablet vertical y móviles grandes (≤ 768px) */
+  @media (max-width: 768px) {
+    body { padding: 8px; font-size: 14px; }
+
+    /* Header: apilar verticalmente, botones centrados y tocables */
+    .header-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .header-left { text-align: center; }
+    h1 { font-size: 17px; line-height: 1.25; }
+    .subtitle { font-size: 11px; margin-bottom: 6px; }
+    .upload-btn-group {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .upload-btn {
+      flex: 1 1 30%;
+      justify-content: center;
+      padding: 10px 8px;
+      font-size: 12px;
+      min-height: 40px;
+    }
+    .upload-btn .ic { font-size: 14px; }
+
+    /* KPIs: 2 columnas en móvil grande (4 tarjetas se ven 2x2) */
+    .top-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .kpi-card, .insight-card {
+      padding: 6px 8px;
+    }
+    .kpi-card .label, .insight-card .ic-label { font-size: 9px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .kpi-card .delta, .insight-card .ic-sub { font-size: 9px; }
+
+    /* Banner de estrategia */
+    .insights-banner {
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .insights-banner .ib-icon { font-size: 22px; }
+    .insights-banner .ib-headline { font-size: 12px; }
+    .insights-banner .ib-stats {
+      margin-left: 0;
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Controles: permitir saltar de línea para que se acomoden bien */
+    .controls {
+      flex-wrap: wrap;
+      gap: 6px;
+      overflow-x: visible;
+      padding: 8px;
+    }
+    .controls input[type=text],
+    .controls select {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 0;
+      font-size: 13px;
+      padding: 7px 8px;
+      min-height: 38px;
+    }
+    .controls input[type=text] { flex: 1 1 100%; }
+    .controls .btn {
+      padding: 9px 14px;
+      font-size: 13px;
+      min-height: 38px;
+      flex: 1 1 auto;
+    }
+    .controls .target-control {
+      flex: 1 1 calc(50% - 6px);
+      justify-content: space-between;
+      padding: 4px 8px;
+    }
+    .controls .target-control input {
+      width: 60px;
+      padding: 4px 6px;
+      font-size: 13px;
+      min-height: 30px;
+    }
+    .controls .legend-inline {
+      width: 100%;
+      margin-left: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    /* Tabla: scroll horizontal con momentum táctil */
+    .table-wrapper {
+      max-height: 70vh;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 6px;
+    }
+    table { font-size: 12px; }
+    thead th { font-size: 10px; padding: 6px 4px; }
+    tbody td { font-size: 12px; padding: 6px 5px; }
+    input.edit {
+      width: 60px;
+      min-height: 30px;
+      font-size: 13px;
+      padding: 4px 6px;
+    }
+
+    /* Detalle del cliente */
+    .detail-info { grid-template-columns: repeat(2, 1fr); }
+    .detail-info .field .val { font-size: 12px; }
+    .detail-header h3 { font-size: 13px; }
+  }
+
+  /* Móvil estándar (≤ 480px) */
+  @media (max-width: 480px) {
+    body { padding: 5px; }
+
+    h1 { font-size: 15px; }
+    .subtitle { font-size: 10px; }
+
+    /* KPIs: 2 columnas */
+    .top-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+    .kpi-card .value, .insight-card .ic-value { font-size: 14px; }
+
+    /* Cada botón de carga en una línea propia */
+    .upload-btn {
+      flex: 1 1 100%;
+    }
+
+    /* Banner más compacto y apilado */
+    .insights-banner { padding: 8px 10px; }
+    .insights-banner .ib-icon { font-size: 20px; }
+    .insights-banner .ib-headline { font-size: 11px; line-height: 1.3; }
+    .insights-banner .ib-stat .ib-val { font-size: 12px; }
+
+    /* Controles: filtros en 1 columna para legibilidad */
+    .controls select {
+      flex: 1 1 100%;
+    }
+    .controls .target-control {
+      flex: 1 1 100%;
+    }
+    .controls .btn {
+      flex: 1 1 calc(50% - 3px);
+    }
+
+    /* Tabla: altura reducida para que se vea bien con el teclado abierto */
+    .table-wrapper { max-height: 60vh; }
+    table { font-size: 11px; }
+    thead th { font-size: 9.5px; padding: 5px 3px; }
+    tbody td { font-size: 11px; padding: 5px 4px; }
+
+    /* Detalle: una sola columna */
+    .detail-info { grid-template-columns: 1fr; }
+
+    /* Chart si está presente */
+    .bottom-chart-wrap .bc-canvas { height: 240px; }
+    .bottom-chart-wrap .bc-legend { font-size: 10px; gap: 8px; flex-wrap: wrap; }
+  }
+
+  /* Móvil muy pequeño (≤ 360px) */
+  @media (max-width: 360px) {
+    h1 { font-size: 14px; }
+    .top-grid { gap: 4px; }
+    .kpi-card, .insight-card { padding: 5px 6px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .controls .btn { flex: 1 1 100%; }
+  }
+
+  /* Mejoras táctiles generales para dispositivos touch */
+  @media (hover: none) and (pointer: coarse) {
+    .upload-btn, .controls .btn {
+      min-height: 40px;
+    }
+    /* Aumentar área tocable de las filas de la tabla */
+    tbody tr { cursor: pointer; }
+    /* Quitar el hover en touch para evitar estados "pegados" */
+    .upload-btn:hover { border-color: #d1d5db; background: white; color: #374151; }
+    .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  }
+
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 + KPI-CART V12 === */
+  /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
+  .step-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    vertical-align: middle;
+  }
+  .num-step {
+    display: none; /* oculto por default en desktop (HTML5 native spinner está disponible) */
+    width: 22px; height: 26px;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-weight: 700;
+    color: #4b5563;
+    border-radius: 3px;
+    font-size: 14px;
+    padding: 0;
+    user-select: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .num-step:hover { background: #e5e7eb; color: #0b3d91; border-color: #0b3d91; }
+  .num-step:active { background: #d1d5db; transform: scale(0.95); }
+
+  /* En móvil/tablet: mostrar los botones +/- y agrandar input para tap fácil */
+  @media (max-width: 900px) {
+    .num-step {
+      display: inline-flex;
+      min-width: 30px; min-height: 34px;
+      font-size: 18px;
+    }
+    input.edit:not(.dso-target) {
+      font-size: 16px !important; /* 16px evita el auto-zoom de iOS al hacer focus */
+      min-height: 34px;
+      padding: 4px 6px !important;
+      width: 56px !important;
+      text-align: center;
+    }
+    .input-cell { padding: 3px 2px !important; }
+  }
+
+  /* ====== ORDENAMIENTO DE COLUMNAS (clic en encabezados) ====== */
+  thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.15s;
+  }
+  thead th.sortable:hover { filter: brightness(0.88); }
+  thead th.sortable::after {
+    content: ' ⇅';
+    font-size: 10px;
+    opacity: 0.45;
+    margin-left: 3px;
+  }
+  thead th.sortable.sorted-asc::after  { content: ' ▲'; opacity: 1; color: #fde68a; }
+  thead th.sortable.sorted-desc::after { content: ' ▼'; opacity: 1; color: #fde68a; }
+  /* En columnas amarillas, usar color oscuro para el indicador activo */
+  thead th.yellow-col.sortable.sorted-asc::after,
+  thead th.yellow-col.sortable.sorted-desc::after { color: #7c2d12; }
+
+  /* ====== ENCABEZADOS DE BLOQUE (group headers) ====== */
+  thead th.group-header {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 7px 4px;
+    text-align: center;
+    border-bottom: 2px solid rgba(255,255,255,0.35);
+  }
+  /* La segunda fila (encabezados de columna) sticky justo debajo de la primera */
+  thead tr.col-row th {
+    top: 32px;
+  }
+
+  /* ====== LAYOUT 2 COLUMNAS: TOTAL & FILTRADA LADO A LADO ====== */
+  #main-content {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+    row-gap: 3px;
+  }
+  #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+  #main-content > .row-tag.tag-filtered { grid-column: 2; grid-row: 1; margin-top: 0; }
+  /* Usar adjacent sibling para asegurar que el top-grid correcto va a cada columna */
+  #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
+  #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 2; grid-row: 2; }
+  /* Resto de elementos ocupa el ancho completo */
+  #main-content > .detail-section,
+  #main-content > .insights-banner,
+  #main-content > .controls,
+  #main-content > .table-wrapper {
+    grid-column: 1 / -1;
+  }
+  /* Ocultar la barra roja "Estrategia Cierre Q2" */
+  #main-content > .insights-banner { display: none !important; }
+
+  /* Tarjetas más compactas para el nuevo layout 2-col */
+  #main-content .top-grid { gap: 3px; }
+  /* Variable de zoom para KPIs (controlada por los botones A+/A-) */
+  :root { --kpi-zoom: 1; }
+  #main-content .kpi-card { padding: calc(4px * var(--kpi-zoom)) calc(6px * var(--kpi-zoom)); }
+  #main-content .kpi-card .label { font-size: calc(10px * var(--kpi-zoom)); letter-spacing: 0.2px; }
+  #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .kpi-card .delta { font-size: calc(10px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .row-tag { font-size: calc(11px * var(--kpi-zoom)); padding: calc(3px * var(--kpi-zoom)) calc(10px * var(--kpi-zoom)); }
+  /* Botones de zoom */
+  .zoom-control {
+    display: inline-flex; gap: 1px; align-items: stretch;
+    border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden;
+    background: white; margin-left: 4px;
+  }
+  .zoom-control button {
+    padding: 3px 8px; background: white; border: none;
+    font-weight: 700; cursor: pointer; color: #374151;
+    line-height: 1;
+  }
+  .zoom-control button:hover { background: #eff6ff; color: #0b3d91; }
+  .zoom-control button:active { background: #dbeafe; }
+  .zoom-control #zoom-in { font-size: 14px; }
+  .zoom-control #zoom-out { font-size: 11px; }
+  .zoom-control #zoom-reset { font-size: 9px; padding: 3px 6px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+
+  /* En tablet vertical y móvil: apilar las dos secciones nuevamente */
+  @media (max-width: 900px) {
+    #main-content {
+      grid-template-columns: 1fr !important;
+    }
+    #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+    #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
+    #main-content > .row-tag.tag-filtered { grid-column: 1; grid-row: 3; margin-top: 4px; }
+    #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 1; grid-row: 4; }
+    #main-content .kpi-card .label { font-size: calc(11px * var(--kpi-zoom)); }
+    #main-content .kpi-card .value { font-size: calc(16px * var(--kpi-zoom)); }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div class="header-left">
+    <h1>Portal de Pronóstico de Cartera Q2 2026</h1>
+    <div class="subtitle">Tablero de pronósticos · Modificación dinámica de K, Q, R, S con recálculo de U, V, W y sugerencias para cerrar a ≤ <b id="hdr-target-dso">90</b> días <span style="margin-left:8px;font-size:9px;color:#10b981;font-weight:600;">v2.1-unidades-miles</span></div>
+  </div>
+  <div class="upload-btn-group">
+    <label class="upload-btn" id="card-cierre" title="Cierre Q2 2026 (Principal)">
+      <span class="ic">📊</span><span>Cierre Q2</span>
+      <input type="file" id="file-cierre" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-cartera" title="Cartera mes anterior (opcional)">
+      <span class="ic">📁</span><span>Cartera</span>
+      <input type="file" id="file-cartera" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-zrepo" title="ZREPO (opcional)">
+      <span class="ic">🗂️</span><span>ZREPO</span>
+      <input type="file" id="file-zrepo" accept=".xlsx,.xls">
+    </label>
+  </div>
+</div>
+
+<div id="main-content" style="display:none;">
+
+  <!-- KPIs Fila 1: TOTAL COMPAÑÍA (fija) -->
+  <div class="row-tag tag-company">TOTAL COMPAÑÍA · <span id="comp-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera">$0</div>
+      <div class="delta" id="kpi-cartera-sub">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v">$0</div>
+      <div class="delta" id="kpi-v-delta">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w">0 d</div>
+      <div class="delta" id="kpi-w-delta">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count">0</div>
+      <div class="delta" id="kpi-count-sub">con datos</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok">0</div>
+      <div class="ic-sub" id="ic-ok-sub">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn">0</div>
+      <div class="ic-sub" id="ic-warn-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk">0</div>
+      <div class="ic-sub" id="ic-risk-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit">0</div>
+      <div class="ic-sub" id="ic-crit-sub">$0</div>
+    </div>
+  </div>
+
+  <!-- KPIs Fila 2: SELECCIÓN FILTRADA (dinámica) -->
+  <div class="row-tag tag-filtered">SELECCIÓN FILTRADA · <span id="filt-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera-f">$0</div>
+      <div class="delta" id="kpi-cartera-sub-f">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v-f">$0</div>
+      <div class="delta" id="kpi-v-delta-f">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w-f">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w-f">0 d</div>
+      <div class="delta" id="kpi-w-delta-f">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count-f">0</div>
+      <div class="delta" id="kpi-count-sub-f">filtrados</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok-f">0</div>
+      <div class="ic-sub" id="ic-ok-sub-f">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn-f">0</div>
+      <div class="ic-sub" id="ic-warn-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk-f">0</div>
+      <div class="ic-sub" id="ic-risk-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit-f">0</div>
+      <div class="ic-sub" id="ic-crit-sub-f">$0</div>
+    </div>
+  </div>
+
+  <!-- Detail panel for selected client - unido visualmente con la fila filtrada arriba -->
+  <div class="detail-section" id="detail-section">
+    <div class="detail-header">
+      <h3 id="detail-title">Detalle Cliente</h3>
+      <button class="btn secondary" onclick="document.getElementById('detail-section').classList.remove('active'); state.selected=null; render();">✕ Cerrar</button>
+    </div>
+    <div class="detail-info" id="detail-info"></div>
+  </div>
+
+  <!-- Insights Banner (línea única compacta) -->
+  <div class="insights-banner" id="ib">
+    <div class="ib-icon" id="ib-icon">🎯</div>
+    <div>
+      <div class="ib-title">Estrategia Cierre Q2</div>
+      <div class="ib-headline" id="ib-headline">Meta: cerrar cartera ≤ 90d maximizando venta</div>
+    </div>
+    <div class="ib-stats">
+      <div class="ib-stat">
+        <div class="ib-lbl">Cobranza extra requerida</div>
+        <div class="ib-val" id="ib-cobranza">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls (single row) -->
+  <div class="controls">
+    <input type="text" id="search" placeholder="🔍 Buscar cliente o #...">
+    <select id="filter-controller"><option value="">Controller: Todos</option></select>
+    <select id="filter-analista"><option value="">Analista: Todos</option></select>
+    <select id="filter-status">
+      <option value="">Status: Todos</option>
+      <option value="excellent">🟢 Excelente (≤60d)</option>
+      <option value="good">🟢 OK (≤90d)</option>
+      <option value="warning">🟡 Atención (90-110)</option>
+      <option value="risk">🟠 Riesgo (110-150)</option>
+      <option value="critical">🔴 Crítico (&gt;150)</option>
+      <option value="na">— Sin venta</option>
+    </select>
+    <select id="filter-block">
+      <option value="">Bloqueo: Todos</option>
+      <option value="blocked">🔒 Bloqueados</option>
+      <option value="unblocked">🟢 Desbloqueados</option>
+    </select>
+    <div class="target-control">
+      <label style="color:#92400e;">DSO meta:</label>
+      <input type="number" id="target-dso" value="90" min="1" max="365" step="1">
+    </div>
+    <button class="btn" id="btn-reset">↺ Restablecer</button>
+    <button class="btn secondary" id="btn-export">⬇ Excel</button>
+    <div class="zoom-control" title="Ajustar tamaño de las tarjetas KPI">
+      <button type="button" id="zoom-out" title="Reducir">A−</button>
+      <button type="button" id="zoom-reset" title="Restablecer tamaño">100%</button>
+      <button type="button" id="zoom-in" title="Aumentar">A+</button>
+    </div>
+    <span class="legend-inline">
+      <span><span class="sw" style="background:#10b981"></span>≤60d</span>
+      <span><span class="sw" style="background:#34d399"></span>≤90d</span>
+      <span><span class="sw" style="background:#facc15"></span>90-110</span>
+      <span><span class="sw" style="background:#fb923c"></span>110-150</span>
+      <span><span class="sw" style="background:#ef4444"></span>&gt;150</span>
+    </span>
+    <span style="margin-left:auto; font-size:10.5px; color:#6b7280; white-space:nowrap;">
+      <b id="row-count">0</b>/<b id="row-total">0</b>
+    </span>
+  </div>
+
+  <!-- Editable Forecast Dashboard table -->
+  <div class="table-wrapper">
+    <table id="data-table">
+      <thead>
+        <tr class="group-row">
+          <th class="text sortable" rowspan="2" data-sort="status" title="Clic para ordenar">Status</th>
+          <th class="text sortable" rowspan="2" data-sort="cliente" title="Clic para ordenar">Cliente</th>
+          <th class="calc-col ctr group-header" colspan="3">Pronóstico</th>
+          <th class="orange-col ctr group-header" colspan="3">Nodo de Ventas</th>
+          <th class="yellow-col ctr group-header" colspan="3">Nodo de Cobranza</th>
+          <th class="filler" rowspan="2"></th>
+        </tr>
+        <tr class="col-row">
+          <th class="calc-col ctr sortable" data-sort="V" title="Clic para ordenar">Pronóstico Cart Q2</th>
+          <th class="calc-col ctr sortable" data-sort="I" title="Clic para ordenar">LTM Total</th>
+          <th class="calc-col ctr sortable" data-sort="dso" title="Clic para ordenar">Pronóstico DSO</th>
+          <th class="orange-col ctr sortable" data-sort="K" title="Clic para ordenar">BE Q2 ✎</th>
+          <th class="orange-col ctr sortable" data-sort="L" title="Clic para ordenar">Facturación Bruta Q2</th>
+          <th class="orange-col ctr sortable" data-sort="M" title="Clic para ordenar">BE Pendiente</th>
+          <th class="yellow-col ctr sortable" data-sort="Q" title="Clic para ordenar">Proyect Cobrar ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="R" title="Clic para ordenar">Real Cobrado ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="S" title="Clic para ordenar">Pend Cobro ✎</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+
+</div>
+
+<div id="initial-msg" class="empty-state">
+  <div class="icon">📤</div>
+  <div style="margin-top:10px; font-size:15px;">Carga el archivo <b>Cierre Q2 2026</b> para comenzar</div>
+  <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Los otros dos archivos son opcionales (referencia)</div>
+</div>
+
+<script>
+// ============ STATE ============
+const state = {
+  rows: [],
+  filtered: [],
+  overrides: {},
+  baseValues: {},
+  selected: null,
+  targetDSO: 90,        // DSO meta global (default y para agregados)
+  dsoTargets: {},       // DSO deseable por cliente: { rowIdx: número }
+  ventaChart: null,     // Instancia Chart.js de la gráfica
+  zrepoByClientMonth: null, // { [SAP]: { '2026-04': suma, '2026-03': suma, ... } } o null si no cargado
+  zrepoByMonth: null,   // { '2026-04': suma compañía, ... } o null
+  sortField: null,      // Campo de ordenamiento elegido por el usuario (null = default DSO desc)
+  sortDir: 'asc',       // 'asc' o 'desc'
+};
+// Devuelve el DSO meta efectivo para una fila: per-row si está definido, sino el global
+function getRowTarget(idx) {
+  return state.dsoTargets[idx] !== undefined ? state.dsoTargets[idx] : state.targetDSO;
+}
+
+// Registrar plugin de datalabels (silencioso si no carga)
+if (window.Chart && window.ChartDataLabels) {
+  Chart.register(window.ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { display: false });
+}
+
+// ============ FORMATTERS ============
+const fmt = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const fmtMoney = n => '$' + fmt(n);
+// Los importes internos están en MILES de pesos. Para mostrar siempre en Millones:
+// dividir entre 1,000 (equivale a /1,000,000 sobre pesos raw) y agregar " M".
+// Ejemplo: 100,000,000 pesos raw = 100,000 (miles) → /1000 = 100 → "100 M".
+const fmtM = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0 M';
+  return Math.round(n / 1000).toLocaleString('es-MX') + ' M';
+};
+// Variante para celdas que vienen en PESOS RAW directamente: divide entre 1,000,000.
+const fmtMraw = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0.0 M';
+  const abs = Math.abs(n);
+  // >= 1 millón: mostrar X.X M (1 decimal)
+  if (abs >= 1000000) {
+    return (n / 1000000).toLocaleString('es-MX', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' M';
+  }
+  // >= 1 mil: mostrar X K (sin decimales)
+  if (abs >= 1000) {
+    return Math.round(n / 1000).toLocaleString('es-MX') + ' K';
+  }
+  // < 1 mil: mostrar 0.0 M (consistente con el formato general)
+  return '0.0 M';
+};
+const fmtMoneyM = n => '$' + fmtM(n);
+const fmtNum1 = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const num = v => {
+  if (v == null || v === '') return 0;
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+};
+
+// ============ FILE LOADING ============
+function setupUpload(inputId, cardId, callback) {
+  const input = document.getElementById(inputId);
+  const card = document.getElementById(cardId);
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      callback(wb, file.name);
+      card.classList.add('loaded');
+      card.title = '✓ ' + file.name;
+    } catch (err) {
+      card.title = '✗ Error: ' + err.message;
+      console.error(err);
+    }
+  });
+}
+
+setupUpload('file-cierre', 'card-cierre', (wb) => {
+  loadQ2(wb);
+});
+// ============ Redimensionar columnas con el mouse ============
+function setupColumnResizers() {
+  const ths = document.querySelectorAll('#data-table thead th');
+  ths.forEach((th, i) => {
+    if (th.classList.contains('filler')) return; // no agregar handle al filler
+    if (th.querySelector('.col-resizer')) return; // ya agregado
+    const handle = document.createElement('div');
+    handle.className = 'col-resizer';
+    th.appendChild(handle);
+    let startX = 0, startW = 0, active = false;
+    handle.addEventListener('mousedown', (e) => {
+      active = true;
+      startX = e.pageX;
+      startW = th.offsetWidth;
+      document.body.style.cursor = 'col-resize';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!active) return;
+      const delta = e.pageX - startX;
+      const newW = Math.max(30, startW + delta);
+      th.style.width = newW + 'px';
+      th.style.minWidth = newW + 'px';
+      th.style.maxWidth = newW + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+      if (active) { active = false; document.body.style.cursor = ''; }
+    });
+  });
+}
+// Llamar después de que la tabla aparezca
+setTimeout(setupColumnResizers, 100);
+
+setupUpload('file-cartera', 'card-cartera', () => {});
+setupUpload('file-zrepo', 'card-zrepo', (wb) => { loadZREPO(wb); });
+
+// ============ PARSE ZREPO ============
+// El archivo tiene encabezados en la fila 6, datos desde la fila 7.
+// Columna A = Solicitante (SAP), Columna N = Fecha de factura, Columna U = Valor neto.
+function loadZREPO(wb) {
+  const sheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) return;
+  // Leer como aoa con dateNF para preservar fechas
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true, cellDates:true});
+  // Fila índice 5 (=row 6) son headers; datos desde índice 6 (=row 7)
+  const byClientMonth = {};
+  const byMonth = {};
+  for (let i = 6; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r) continue;
+    const sap = r[0];          // Col A
+    const fecha = r[13];       // Col N
+    const valNeto = r[20];     // Col U
+    if (typeof sap !== 'number' || sap <= 0) continue;
+    if (typeof valNeto !== 'number') continue;
+    let key = null;
+    if (fecha instanceof Date) {
+      key = fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'number') {
+      // Excel serial date
+      const d = new Date((fecha - 25569) * 86400 * 1000);
+      key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'string' && fecha.length >= 7) {
+      // Try parse
+      const d = new Date(fecha);
+      if (!isNaN(d)) key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    }
+    if (!key) continue;
+    if (!byClientMonth[sap]) byClientMonth[sap] = {};
+    byClientMonth[sap][key] = (byClientMonth[sap][key] || 0) + valNeto;
+    byMonth[key] = (byMonth[key] || 0) + valNeto;
+  }
+  state.zrepoByClientMonth = byClientMonth;
+  state.zrepoByMonth = byMonth;
+  // Re-render gráfica si ya hay datos
+}
+
+// ============ PARSE Q2 ============
+function loadQ2(wb) {
+  const sheet = wb.Sheets['Q2'] || wb.Sheets[wb.SheetNames[0]];
+  // Lookup desde "BE Actualizado" por SAP (col C):
+  //   F = BE Q2 26 (pesos raw)          → reemplaza K
+  //   E = Vta Neta Jul25-Mar26 (raw)    → para recalcular LTM
+  //   G = BN % (decimal)                → para recalcular LTM
+  // Fórmula de la columna J en BE Actualizado: J = (E + F*(1+G)) / 1000  (en miles)
+  const beSheet = wb.Sheets['BE Actualizado'];
+  const beLookup = {};
+  if (beSheet) {
+    const beAoa = XLSX.utils.sheet_to_json(beSheet, {header:1, defval:null, raw:true});
+    for (let i = 1; i < beAoa.length; i++) {
+      const r = beAoa[i];
+      if (!r) continue;
+      const id = r[2];   // Col C = SAP
+      if (id == null) continue;
+      beLookup[id] = {
+        F: num(r[5]),    // Col F = BE Q2 26
+        E: num(r[4]),    // Col E = Vta Neta Jul25-Mar26
+        G: num(r[6])     // Col G = BN %
+      };
+    }
+  }
+
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
+  const rows = [];
+  for (let i = 3; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r || !r[3]) continue;
+    // Excluir filas que no son clientes reales (subtotales, totales, ajustes):
+    // Solo aceptar filas con un SAP numérico positivo en la columna C.
+    const cid = r[2];
+    if (typeof cid !== 'number' || !(cid > 0)) continue;
+    const beRef = beLookup[cid]; // { F, E, G } en pesos raw (o undefined)
+    // El archivo reorganizó las columnas pero conservan los mismos nombres.
+    // Mapeo nuevo orden de columnas (índice 0-based) a nombres semánticos del código:
+    //   A=Controller(0), B=Analista(1), C=#(2), D=Nombre(3)
+    //   E=Cartera Actual(4), F=Total(5), G=Corriente(6), H=Vencido(7)
+    //   I_NEW=Cart Cierre Mes Anterior(8) — antes J  → semantic J
+    //   J_NEW=ZREPO Mes Corriente(9) — antes O       → semantic O
+    //   K_NEW=ZREPO Mes C/IVA(10) — antes P          → semantic P
+    //   L_NEW=Factor Imp(11) — antes T               → semantic T
+    //   M_NEW=Cart Pendiente al Cierre(12) — antes U → semantic U
+    //   N_NEW=Pronóstico Cart Tot al Cierre Q2(13) — antes V → semantic V
+    //   O_NEW=LTM Total(14) — antes I                → semantic I
+    //   P_NEW=Pronóstico DSO Cierre Q2(15) — antes W → semantic W
+    //   Q_NEW=BE Q2(16) — antes K                    → semantic K
+    //   R_NEW=ZREPO Q2 Actual(17) — antes L          → semantic L
+    //   S_NEW=BE Pendiente(18) — antes M             → semantic M
+    //   T_NEW=Proyectado Cobrar Q2(19) — antes Q     → semantic Q
+    //   U_NEW=Real Cobrado(20) — antes R             → semantic R
+    //   V_NEW=Pendiente de Cobro(21) — antes S       → semantic S
+    //   W_NEW=Estimado Cierre Q2(22) — antes N       → semantic N
+    const row = {
+      idx: rows.length,
+      A_controller: r[0] || '',
+      B_analista: r[1] || '',
+      C_id: cid,
+      D_nombre: r[3] || '',
+      E: num(r[4]), F: num(r[5]), G: num(r[6]), H: num(r[7]),
+      I: num(r[14]),                      // LTM Total ← new col O (idx 14)
+      J: num(r[8]),                       // Cart Mes Anterior ← new col I (idx 8)
+      K: beRef !== undefined ? beRef.F : num(r[16]),  // BE Q2 ← new col Q (idx 16)
+      L: num(r[17]),                      // ZREPO Q2 Actual ← new col R (idx 17)
+      M: num(r[18]),                      // BE Pendiente ← new col S (idx 18)
+      N: num(r[22]),                      // Estimado Cierre Q2 ← new col W (idx 22)
+      O: num(r[9]),                       // ZREPO Mes Corriente ← new col J (idx 9)
+      P: num(r[10]),                      // ZREPO Mes C/IVA ← new col K (idx 10)
+      Q: num(r[19]),                      // Proyectado a Cobrar ← new col T (idx 19)
+      R: num(r[20]),                      // Real Cobrado ← new col U (idx 20)
+      S: num(r[21]),                      // Pendiente de Cobro ← new col V (idx 21)
+      T: num(r[11]),                      // Factor Imp ← new col L (idx 11)
+      U: num(r[12]),                      // Cart Pendiente al Cierre ← new col M (idx 12)
+      V: num(r[13]),                      // Pronóstico Cart Tot Cierre Q2 ← new col N (idx 13)
+      W: num(r[15]),                      // Pronóstico DSO Cierre Q2 ← new col P (idx 15)
+      // Referencia para recalcular LTM (I) en pesos raw
+      BE_E: beRef !== undefined ? beRef.E : null,
+      BE_G: beRef !== undefined ? beRef.G : null,
+    };
+    rows.push(row);
+  }
+  state.rows = rows;
+  state.baseValues = {};
+  rows.forEach(r => {
+    state.baseValues[r.idx] = { U: r.U, V: r.V, W: r.W, K: r.K, Q: r.Q, R: r.R, S: r.S };
+  });
+  state.overrides = {};
+  initFilters();
+  document.getElementById('initial-msg').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  applyFilters();
+}
+
+// ============ COMPUTATIONS ============
+function getLive(r) {
+  const o = state.overrides[r.idx] || {};
+  const K = o.K !== undefined ? o.K : r.K;
+  const R = o.R !== undefined ? o.R : r.R;
+  let S = o.S !== undefined ? o.S : r.S;
+  let Q;
+  if (o.Q !== undefined) {
+    // Q se editó manualmente. Si S no fue editada, la derivamos: S = Q - R
+    // (mantiene la fórmula original del archivo y propaga el cambio a U/V/W/DSO)
+    Q = o.Q;
+    if (o.S === undefined) S = Q - R;
+  } else {
+    // Q se calcula automáticamente como R + S
+    Q = R + S;
+  }
+  const M = K - r.L;
+  const U = r.J + r.P - R - S;
+  // Factor Imp: si es 0/nulo/inválido, se usa 1 para que no anule el BE Pendiente
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const V = (M * factorT) + U;
+  // LTM (I): preserva el LTM Total del Excel cuando K no fue editado.
+  // Cuando el usuario edita K (BE Q2), aplicamos solo el DELTA del cambio
+  // multiplicado por (1+BE_G) para mantener la sensibilidad sin distorsionar la base.
+  let I = r.I;
+  if (r.BE_G != null && K !== r.K) {
+    I = r.I + (K - r.K) * (1 + r.BE_G);
+  }
+  const W = I !== 0 ? (V / I) * 360 : 0;
+  return {K, Q, R, S, M, U, V, W, I, hasVenta: I !== 0};
+}
+
+// Status banding by DSO (recibe el target específico de la fila)
+function dsoLevel(W, hasVenta, target) {
+  target = target == null ? state.targetDSO : target;
+  if (!hasVenta) return 'na';
+  if (W <= Math.max(30, target - 30)) return 'excellent';
+  if (W <= target) return 'good';
+  if (W <= target + 20) return 'warning';
+  if (W <= target + 60) return 'risk';
+  return 'critical';
+}
+const levelLabel = {
+  excellent: '🟢 Excelente',
+  good: '🟢 OK',
+  warning: '🟡 Atención',
+  risk: '🟠 Riesgo',
+  critical: '🔴 Crítico',
+  na: '— Sin venta'
+};
+
+// Suggestion logic per client - usa el DSO meta por fila
+function getSuggestion(r, live) {
+  const target = getRowTarget(r.idx);
+  if (!live.hasVenta) {
+    return {
+      type: 'na',
+      lines: [{icon:'ℹ', text:'Sin venta LTM — no aplica DSO', amountKind:null, amount:null}],
+      cobranzaExtra: 0, ventaExtra: 0, ventaMax: 0, vTarget: 0, target
+    };
+  }
+  // V_target: cartera óptima para mantener DSO ≤ target → V_target = I * target / 360
+  const vTarget = live.I * target / 360;
+  const cobranzaExtra = Math.max(0, live.V - vTarget);
+  const iRequired = live.V * 360 / target; // venta requerida para soportar cartera actual al DSO meta
+  const ventaMaxAlMeta = vTarget * 360 / target; // = I (venta máxima soportada con cartera óptima)
+
+  const lines = [];
+  if (live.W <= target) {
+    const margenCartera = vTarget - live.V;
+    const ventaExtraSoportada = margenCartera * 360 / target;
+    lines.push({icon:'✓', text:`En meta (${target}d)`, amountKind:'pos', amount: 'DSO ' + fmtNum1(live.W) + 'd'});
+    lines.push({icon:'💰', text:'Cartera óptima máx.', amountKind:'pos', amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📈', text:'Venta extra absorbible', amountKind:'pos', amount: fmtMoneyM(Math.max(0, ventaExtraSoportada))});
+  } else {
+    lines.push({icon:'⚠', text:`Cobrar para llegar a ${target}d`, amountKind:'neg', amount: fmtMoneyM(cobranzaExtra)});
+    lines.push({icon:'💰', text:'Cartera óptima', amountKind:null, amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📊', text:'O subir venta a', amountKind:null, amount: fmtMoneyM(iRequired)});
+  }
+  return { type: live.W <= target ? 'ok' : 'over', lines, cobranzaExtra, vTarget, ventaMaxAlMeta, target };
+}
+
+// ============ FILTERS ============
+function initFilters() {
+  const controllers = [...new Set(state.rows.map(r => r.A_controller).filter(Boolean))].sort();
+  const analistas = [...new Set(state.rows.map(r => r.B_analista).filter(Boolean))].sort();
+  const fc = document.getElementById('filter-controller');
+  const fa = document.getElementById('filter-analista');
+  fc.innerHTML = '<option value="">Todos</option>' + controllers.map(c => `<option value="${c}">${c}</option>`).join('');
+  fa.innerHTML = '<option value="">Todos</option>' + analistas.map(a => `<option value="${a}">${a}</option>`).join('');
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const c = document.getElementById('filter-controller').value;
+  const a = document.getElementById('filter-analista').value;
+  const s = document.getElementById('filter-status').value;
+  const b = document.getElementById('filter-block').value;
+  state.filtered = state.rows.filter(r => {
+    if (c && r.A_controller !== c) return false;
+    if (a && r.B_analista !== a) return false;
+    if (q) {
+      const hay = (r.D_nombre + ' ' + r.C_id).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (s) {
+      const live = getLive(r);
+      if (dsoLevel(live.W, live.hasVenta, getRowTarget(r.idx)) !== s) return false;
+    }
+    if (b === 'blocked' && !r.Y_blocked) return false;
+    if (b === 'unblocked' && r.Y_blocked) return false;
+    return true;
+  });
+  // Ordenamiento: si el usuario eligió un campo, usa ese; sino default por DSO descendente
+  if (state.sortField) {
+    const field = state.sortField;
+    const dir = state.sortDir === 'desc' ? -1 : 1;
+    const lvlOrder = { excellent:1, good:2, warning:3, risk:4, critical:5, na:6 };
+    state.filtered.sort((a, b) => {
+      let va, vb;
+      if (field === 'status') {
+        // Ordenar por estado de bloqueo: bloqueados primero (asc)
+        va = a.Y_blocked ? 0 : 1;
+        vb = b.Y_blocked ? 0 : 1;
+      } else if (field === 'cliente') {
+        va = (a.D_nombre || '').toLowerCase();
+        vb = (b.D_nombre || '').toLowerCase();
+      } else if (field === 'dso') {
+        const liveA = getLive(a), liveB = getLive(b);
+        va = liveA.hasVenta && liveA.I !== 0 ? (liveA.V / liveA.I) * 360 : -1;
+        vb = liveB.hasVenta && liveB.I !== 0 ? (liveB.V / liveB.I) * 360 : -1;
+      } else if (field === 'L') {
+        va = a.L; vb = b.L;
+      } else {
+        // Campos de getLive: V, I, K, M, Q, R, S
+        va = getLive(a)[field];
+        vb = getLive(b)[field];
+      }
+      if (va < vb) return -1 * dir;
+      if (va > vb) return  1 * dir;
+      return 0;
+    });
+  } else {
+    // Default: DSO descendente
+    state.filtered.sort((a, b) => getLive(b).W - getLive(a).W);
+  }
+  render();
+}
+
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('filter-controller').addEventListener('change', applyFilters);
+document.getElementById('filter-analista').addEventListener('change', applyFilters);
+document.getElementById('filter-status').addEventListener('change', applyFilters);
+document.getElementById('filter-block').addEventListener('change', applyFilters);
+document.getElementById('target-dso').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value);
+  if (isNaN(v) || v < 1) return;
+  state.targetDSO = v;
+  document.getElementById('hdr-target-dso').textContent = v;
+  applyFilters();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.overrides = {};
+  state.dsoTargets = {};
+  applyFilters();
+});
+document.getElementById('btn-export').addEventListener('click', exportExcel);
+
+// ============ ORDENAMIENTO DE COLUMNAS ============
+function updateSortIndicators() {
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (state.sortField === th.dataset.sort) {
+      th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+document.querySelectorAll('thead th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.dataset.sort;
+    if (state.sortField === field) {
+      // 3 estados cíclicos: asc → desc → ninguno (default DSO desc)
+      if (state.sortDir === 'asc') state.sortDir = 'desc';
+      else { state.sortField = null; state.sortDir = 'asc'; }
+    } else {
+      state.sortField = field;
+      state.sortDir = 'asc';
+    }
+    updateSortIndicators();
+    applyFilters();
+  });
+});
+
+// ============ ZOOM DE KPIs (A+/A-/Reset) ============
+(function() {
+  const root = document.documentElement;
+  const KEY = 'kpi-zoom-v1';
+  function clamp(z) { return Math.max(0.7, Math.min(2.0, z)); }
+  function readZoom() {
+    const v = parseFloat(localStorage.getItem(KEY) || '1');
+    return isNaN(v) ? 1 : clamp(v);
+  }
+  function setZoom(z) {
+    const c = clamp(z);
+    root.style.setProperty('--kpi-zoom', c);
+    try { localStorage.setItem(KEY, c.toFixed(2)); } catch(e) {}
+    const reset = document.getElementById('zoom-reset');
+    if (reset) reset.textContent = Math.round(c * 100) + '%';
+  }
+  // Aplicar el zoom guardado al cargar
+  setZoom(readZoom());
+  // Listeners
+  const zin  = document.getElementById('zoom-in');
+  const zout = document.getElementById('zoom-out');
+  const zres = document.getElementById('zoom-reset');
+  if (zin)  zin.addEventListener('click',  () => setZoom(readZoom() + 0.1));
+  if (zout) zout.addEventListener('click', () => setZoom(readZoom() - 0.1));
+  if (zres) zres.addEventListener('click', () => setZoom(1));
+})();
+
+// ============ RENDER TABLE ============
+function render() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  state.filtered.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    const rowTarget = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+    const sug = getSuggestion(r, live);
+    const tr = document.createElement('tr');
+    tr.dataset.idx = r.idx;
+    if (state.selected === r.idx) tr.classList.add('selected');
+    const vChg = Math.abs(live.V - base.V) > 0.01;
+    const o = state.overrides[r.idx] || {};
+
+    // DSO progress bar: rango 0-200d, marcador en meta del cliente
+    const dsoMax = 200;
+    const targetPct = Math.min(100, (rowTarget / dsoMax) * 100);
+
+    const nameShort = r.D_nombre.length > 30 ? r.D_nombre.slice(0,30)+'…' : r.D_nombre;
+    const liveI = live.I;
+    const iChanged = Math.abs(liveI - r.I) > 0.01;
+    // Pronóstico DSO en vivo = (V/I)·360 (fórmula original del archivo)
+    const dsoW = liveI !== 0 ? (live.V / liveI) * 360 : 0;
+    const lvlW = dsoLevel(dsoW, liveI !== 0, rowTarget);
+    const wPct = Math.min(100, Math.max(0, (dsoW / dsoMax) * 100));
+    const wChg = Math.abs(dsoW - base.W) > 0.5;
+    tr.innerHTML = `
+      <td class="text"><span class="status-badge lvl-${r.Y_blocked?'critical':'good'}" title="Status de bloqueo (col Z del Cierre Q2)">${r.Y_blocked?'🔒 Bloqueado':'🟢 Desbloqueado'}</span></td>
+      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:170px;"><b>${nameShort}</b><br><span style="font-size:8.5px;color:#9ca3af;">${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}</span></td>
+      <td class="calc-cell ${vChg?'changed':''}">${fmtMraw(live.V)}</td>
+      <td class="calc-cell ${iChanged?'changed':''}" title="LTM = (E + BE_Q2 × (1+BN%)) / 1000">${fmtMraw(liveI)}</td>
+      <td class="dso-cell lvl-${lvlW} ${wChg?'changed':''}" title="Pronóstico DSO = (V/I)·360">
+        <div class="dso-bar" title="DSO ${fmtNum1(dsoW)}d / meta ${rowTarget}d">
+          <div class="dso-bar-fill lvl-${lvlW}" style="width:${wPct}%"></div>
+          <div class="dso-bar-target" style="left:${targetPct}%"></div>
+        </div>
+        <span>${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}</span>
+      </td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.K!==undefined?'changed':''}" data-field="K" data-idx="${r.idx}" value="${Math.round(live.K/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td>${fmtMraw(r.L)}</td>
+      <td class="calc-cell">${fmtMraw(live.M)}</td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.Q!==undefined?'changed':''}" data-field="Q" data-idx="${r.idx}" value="${Math.round(live.Q/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.R!==undefined?'changed':''}" data-field="R" data-idx="${r.idx}" value="${Math.round(live.R/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.S!==undefined?'changed':''}" data-field="S" data-idx="${r.idx}" value="${Math.round(live.S/1000000)}" step="any" title="Captura en Millones (10 = 10M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="filler"></td>
+    `;
+    tr.addEventListener('click', (ev) => {
+      if (ev.target.tagName === 'INPUT') return;
+      state.selected = r.idx;
+      showDetail(r);
+      render();
+    });
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+
+  // Attach input listeners (campos financieros K/Q/R/S)
+  tbody.querySelectorAll('input.edit:not(.dso-target)').forEach(inp => {
+    inp.addEventListener('input', onEdit);
+    inp.addEventListener('focus', e => e.target.select());
+  });
+  // Botones +/- (visibles en móvil) que disparan el mismo evento input
+  tbody.querySelectorAll('.num-step').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const wrap = btn.parentElement;
+      const inp = wrap.querySelector('input.edit');
+      if (!inp) return;
+      const step = parseFloat(btn.dataset.step) || 1;
+      const cur = parseFloat(inp.value) || 0;
+      inp.value = cur + step;
+      // Disparar el evento input para que onEdit recalcule todo
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+  // Listener para DSO deseable por fila
+  tbody.querySelectorAll('input.edit.dso-target').forEach(inp => {
+    inp.addEventListener('input', onEditDSO);
+    inp.addEventListener('focus', e => e.target.select());
+  });
+
+  document.getElementById('row-count').textContent = state.filtered.length;
+  document.getElementById('row-total').textContent = state.rows.length;
+
+  updateKPIs();
+  updateInsights();
+  updateFilteredKPIs();
+  if (state.selected != null) {
+    const r = state.rows.find(x => x.idx === state.selected);
+    if (r) showDetail(r);
+  }
+}
+
+// ============ GRÁFICA: Venta por mes vs Compañía (con etiquetas de datos) ============
+function renderVentaChart() {
+  if (!window.Chart || !state.rows.length) return;
+  const ctx = document.getElementById('chart-venta');
+  if (!ctx) return;
+
+  // Asegurar registro del plugin datalabels (si está disponible)
+  if (window.ChartDataLabels && !Chart._dlRegistered) {
+    Chart.register(window.ChartDataLabels);
+    Chart.defaults.set('plugins.datalabels', { display: false });
+    Chart._dlRegistered = true;
+  }
+
+  const focus = state.filtered.length && state.filtered.length < state.rows.length
+    ? state.filtered : state.rows;
+  const isFiltered = focus !== state.rows;
+  const focusLabel = isFiltered
+    ? (focus.length === 1 ? focus[0].D_nombre.slice(0,28) : `${focus.length} clientes`)
+    : 'Compañía';
+
+  // 12 etiquetas mes (último año, mes corriente al final) — key 'YYYY-MM' para lookup
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now = new Date();
+  const labels = [];
+  const keys = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(months[d.getMonth()]);
+    keys.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  }
+
+  let focusData, companyData, dataSource;
+  if (state.zrepoByMonth) {
+    // === Datos de ZREPO: columna U (Valor Neto) agrupados por columna N (Fecha de factura) ===
+    dataSource = 'ZREPO Vta Neta';
+    // Compañía: suma de Valor Neto por mes en todo el archivo
+    companyData = keys.map(k => state.zrepoByMonth[k] || 0);
+    // Foco: suma de Valor Neto por mes solo para los SAPs filtrados
+    if (isFiltered) {
+      const sapsFiltrados = new Set(focus.map(r => r.C_id));
+      focusData = keys.map(k => {
+        let s = 0;
+        sapsFiltrados.forEach(sap => {
+          const cm = state.zrepoByClientMonth[sap];
+          if (cm && cm[k] != null) s += cm[k];
+        });
+        return s;
+      });
+    } else {
+      focusData = companyData.slice(); // sin filtro, foco = compañía
+    }
+  } else {
+    // Fallback al cálculo previo (promedio LTM / 12)
+    dataSource = 'Promedio LTM / 12';
+    const totalCompanyAnnual = state.rows.reduce((a, r) => a + getLive(r).I, 0);
+    const focusAnnual = focus.reduce((a, r) => a + getLive(r).I, 0);
+    companyData = Array(12).fill(totalCompanyAnnual / 12);
+    focusData = Array(12).fill(focusAnnual / 12);
+  }
+
+  // Actualizar leyenda dinámica
+  const legFocus = document.getElementById('bc-leg-focus');
+  if (legFocus) legFocus.textContent = focusLabel + ' / mes — ' + dataSource;
+  const legCompany = document.getElementById('bc-leg-company');
+  if (legCompany) legCompany.textContent = (state.zrepoByMonth ? 'Compañía / mes — Vta Neta' : 'Promedio compañía / mes');
+
+  if (state.ventaChart) state.ventaChart.destroy();
+  state.ventaChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: focusLabel + ' / mes',
+          data: focusData,
+          backgroundColor: '#0891b2',
+          borderRadius: 3,
+          categoryPercentage: 0.75,
+          barPercentage: 0.92,
+          datalabels: {
+            display: true,
+            anchor: 'end', align: 'end', offset: 2,
+            font: { size: 9, weight: '700' },
+            color: '#0e7490',
+            formatter: v => fmtMraw(v)
+          }
+        },
+        {
+          label: 'Promedio compañía / mes',
+          data: companyData,
+          type: 'line',
+          borderColor: '#475569',
+          borderWidth: 2,
+          borderDash: [4, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#475569',
+          fill: false,
+          datalabels: {
+            display: ctx => ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1,
+            align: 'top', offset: 4,
+            font: { size: 9, weight: '700' },
+            color: '#1e293b',
+            formatter: v => fmtMraw(v)
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18, bottom: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => c.dataset.label + ': $' + fmtMraw(c.parsed.y) }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#475569' }, grid: { display: false } },
+        y: { display: false, beginAtZero: true, grace: '15%' }
+      }
+    }
+  });
+}
+
+function onEdit(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const field = e.target.dataset.field;
+  // El usuario captura en Millones; internamente guardamos en pesos raw. Multiplicamos por 1,000,000.
+  const rawInput = e.target.value === '' ? 0 : parseFloat(e.target.value);
+  if (isNaN(rawInput)) return;
+  const val = rawInput * 1000000;
+  if (!state.overrides[idx]) state.overrides[idx] = {};
+  // El valor base de cada campo viene directo del archivo
+  const baseField = state.baseValues[idx][field];
+  if (Math.abs(val - baseField) < 0.5) {
+    delete state.overrides[idx][field];
+    if (Object.keys(state.overrides[idx]).length === 0) delete state.overrides[idx];
+  } else {
+    state.overrides[idx][field] = val;
+  }
+  // Re-render only this row + KPIs (simpler: full re-render is fast for 161 rows)
+  // But preserve focus
+  const focusInfo = { idx, field };
+  render();
+  // Restore focus
+  const sel = document.querySelector(`input.edit[data-idx="${focusInfo.idx}"][data-field="${focusInfo.field}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+// ============ DSO Target por fila ============
+function onEditDSO(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const val = parseInt(e.target.value);
+  if (isNaN(val) || val < 1 || val > 365) return;
+  // Si coincide con el global, eliminar el override (toma el global por defecto)
+  if (val === state.targetDSO) delete state.dsoTargets[idx];
+  else state.dsoTargets[idx] = val;
+  // Re-render preservando foco
+  render();
+  const sel = document.querySelector(`input.edit.dso-target[data-idx="${idx}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+// ============ KPIs ============
+// La primera sección de KPIs siempre muestra el TOTAL COMPAÑÍA (todas las filas),
+// sin importar el filtro aplicado a la tabla.
+function updateKPIs() {
+  let totE = 0, totU = 0, totV = 0, totI = 0, totUbase = 0, totVbase = 0;
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
+    totUbase += base.U; totVbase += base.V;
+  });
+  // DSO Global W = (Pronóstico Cart Tot al Cierre Q2 (V) / LTM Total (I)) * 360
+  const dsoLive = totI !== 0 ? (totV / totI) * 360 : 0;
+  const dsoBase = totI !== 0 ? (totVbase / totI) * 360 : 0;
+  // Importes en KPIs dividen entre 1,000,000 con sufijo " M" (fmtMraw)
+  document.getElementById('kpi-cartera').textContent = '$' + fmtMraw(totE);
+  document.getElementById('kpi-cartera-sub').textContent = state.filtered.length + ' clientes';
+  // KPI: Pronóstico Cart Tot al Cierre Q2 = total directo de la columna V del archivo (base)
+  document.getElementById('kpi-v').textContent = '$' + fmtMraw(totVbase);
+  const dV = totV - totVbase;
+  const elV = document.getElementById('kpi-v-delta');
+  elV.textContent = (dV >= 0 ? '▲+$' : '▼$') + fmtMraw(Math.abs(dV)) + ' vs escenario';
+  elV.className = 'delta ' + (Math.abs(dV) < 1 ? '' : (dV >= 0 ? 'up' : 'down'));
+  document.getElementById('kpi-w').textContent = fmtNum1(dsoLive) + ' d';
+  const dW = dsoLive - dsoBase;
+  const elW = document.getElementById('kpi-w-delta');
+  elW.textContent = (dW >= 0 ? '▲+' : '▼') + fmtNum1(Math.abs(dW)) + ' d';
+  elW.className = 'delta ' + (Math.abs(dW) < 0.05 ? '' : (dW >= 0 ? 'down' : 'up'));
+  document.getElementById('kpi-count').textContent = state.rows.length;
+  document.getElementById('kpi-cartera-sub').textContent = 'Total compañía';
+  const cc = document.getElementById('comp-count');
+  if (cc) cc.textContent = state.rows.length;
+
+  // Color DSO KPI by level (usando el global como referencia)
+  const lvl = dsoLevel(dsoLive, totI !== 0, state.targetDSO);
+  const dsoCard = document.getElementById('kpi-card-w');
+  dsoCard.className = 'kpi-card ' + (
+    lvl === 'excellent' || lvl === 'good' ? 'dso-green'
+    : lvl === 'warning' ? 'dso-yellow'
+    : lvl === 'risk' ? 'dso-orange'
+    : lvl === 'critical' ? 'dso-red'
+    : ''
+  );
+}
+
+// ============ INSIGHTS ============
+function updateInsights() {
+  const buckets = { excellent:{n:0,cart:0}, good:{n:0,cart:0}, warning:{n:0,cart:0}, risk:{n:0,cart:0}, critical:{n:0,cart:0}, na:{n:0,cart:0} };
+  let totCobranzaExtra = 0; // sum of (V - V_target) for those over
+  let totVentaExtra = 0;    // sum of capacity to grow venta for those in meta
+  let totV = 0, totI = 0;
+  // Tarjetas semáforo siempre se calculan sobre el total compañía (state.rows)
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    buckets[lvl].n++;
+    buckets[lvl].cart += live.V;
+    totV += live.V; totI += live.I;
+    if (live.hasVenta) {
+      const vTarget = live.I * tgt / 360;
+      if (live.V > vTarget) totCobranzaExtra += (live.V - vTarget);
+      else totVentaExtra += (vTarget - live.V) * (360 / tgt); // extra venta soportada
+    }
+  });
+
+  document.getElementById('ic-ok').textContent = (buckets.excellent.n + buckets.good.n);
+  document.getElementById('ic-ok-sub').textContent = 'Cartera $' + fmtMraw(buckets.excellent.cart + buckets.good.cart);
+  document.getElementById('ic-warn').textContent = buckets.warning.n;
+  document.getElementById('ic-warn-sub').textContent = 'Cartera $' + fmtMraw(buckets.warning.cart);
+  document.getElementById('ic-risk').textContent = buckets.risk.n;
+  document.getElementById('ic-risk-sub').textContent = 'Cartera $' + fmtMraw(buckets.risk.cart);
+  document.getElementById('ic-crit').textContent = buckets.critical.n;
+  document.getElementById('ic-crit-sub').textContent = 'Cartera $' + fmtMraw(buckets.critical.cart);
+
+  document.getElementById('ib-cobranza').textContent = '$' + fmtMraw(totCobranzaExtra);
+
+  // Headline dinámico
+  const ib = document.getElementById('ib');
+  const ibIcon = document.getElementById('ib-icon');
+  const ibHead = document.getElementById('ib-headline');
+  const dsoGlobal = totI !== 0 ? (totV / totI) * 360 : 0;
+  if (dsoGlobal <= state.targetDSO) {
+    ibIcon.textContent = '✅';
+    ibHead.textContent = `Portafolio en meta: DSO global ${fmtNum1(dsoGlobal)}d ≤ ${state.targetDSO}d. Hay espacio para crecer venta.`;
+    ib.style.background = 'linear-gradient(90deg, #065f46 0%, #047857 100%)';
+  } else if (dsoGlobal <= state.targetDSO + 20) {
+    ibIcon.textContent = '⚠';
+    ibHead.textContent = `Cerca de meta: DSO ${fmtNum1(dsoGlobal)}d. Necesita cobrar ${fmtMoneyM(totCobranzaExtra)} extra para cerrar a ${state.targetDSO}d.`;
+    ib.style.background = 'linear-gradient(90deg, #92400e 0%, #b45309 100%)';
+  } else {
+    ibIcon.textContent = '🔥';
+    ibHead.textContent = `Fuera de meta: DSO ${fmtNum1(dsoGlobal)}d. Necesita cobrar ${fmtMoneyM(totCobranzaExtra)} extra para cerrar a ${state.targetDSO}d.`;
+    ib.style.background = 'linear-gradient(90deg, #991b1b 0%, #b91c1c 100%)';
+  }
+}
+
+// ============ KPIs FILTRADOS (segunda fila dinámica) ============
+function updateFilteredKPIs() {
+  let totE = 0, totU = 0, totV = 0, totI = 0, totVbase = 0;
+  const buckets = { excellent:{n:0,cart:0}, good:{n:0,cart:0}, warning:{n:0,cart:0}, risk:{n:0,cart:0}, critical:{n:0,cart:0}, na:{n:0,cart:0} };
+  state.filtered.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
+    totVbase += base.V;
+    buckets[lvl].n++; buckets[lvl].cart += live.V;
+  });
+  const dsoLive = totI !== 0 ? (totV / totI) * 360 : 0;
+  document.getElementById('kpi-cartera-f').textContent = '$' + fmtMraw(totE);
+  document.getElementById('kpi-cartera-sub-f').textContent = state.filtered.length + ' clientes filtrados';
+  document.getElementById('kpi-v-f').textContent = '$' + fmtMraw(totVbase);
+  const dV = totV - totVbase;
+  const elVf = document.getElementById('kpi-v-delta-f');
+  elVf.textContent = (dV >= 0 ? '▲+$' : '▼$') + fmtMraw(Math.abs(dV)) + ' vs escenario';
+  elVf.className = 'delta ' + (Math.abs(dV) < 1 ? '' : (dV >= 0 ? 'up' : 'down'));
+  document.getElementById('kpi-w-f').textContent = fmtNum1(dsoLive) + ' d';
+  document.getElementById('kpi-w-delta-f').textContent = '';
+  document.getElementById('kpi-count-f').textContent = state.filtered.length;
+
+  // Color del DSO filtrado por nivel
+  const lvl = dsoLevel(dsoLive, totI !== 0, state.targetDSO);
+  const dsoCardF = document.getElementById('kpi-card-w-f');
+  dsoCardF.className = 'kpi-card ' + (
+    lvl === 'excellent' || lvl === 'good' ? 'dso-green'
+    : lvl === 'warning' ? 'dso-yellow'
+    : lvl === 'risk' ? 'dso-orange'
+    : lvl === 'critical' ? 'dso-red'
+    : ''
+  );
+
+  // Tarjetas semáforo del subconjunto filtrado
+  document.getElementById('ic-ok-f').textContent = buckets.excellent.n + buckets.good.n;
+  document.getElementById('ic-ok-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.excellent.cart + buckets.good.cart);
+  document.getElementById('ic-warn-f').textContent = buckets.warning.n;
+  document.getElementById('ic-warn-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.warning.cart);
+  document.getElementById('ic-risk-f').textContent = buckets.risk.n;
+  document.getElementById('ic-risk-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.risk.cart);
+  document.getElementById('ic-crit-f').textContent = buckets.critical.n;
+  document.getElementById('ic-crit-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.critical.cart);
+
+  document.getElementById('filt-count').textContent = state.filtered.length;
+}
+
+// ============ DETAIL VIEW ============
+function showDetail(r) {
+  const live = getLive(r);
+  const base = state.baseValues[r.idx];
+  const sug = getSuggestion(r, live);
+  const rowTarget = getRowTarget(r.idx);
+  const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+  // Cartera Actual dinámica (KPI-CART V12): al cobrar más baja; al subir BE Q2 sube (× Factor de impuesto)
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const carteraActualLive = r.E - (live.R - r.R) + (live.K - r.K) * factorT;
+  document.getElementById('detail-section').classList.add('active');
+  document.getElementById('detail-title').innerHTML = `${r.D_nombre} <span style="font-size:11px;color:#9ca3af;">(${r.C_id})</span> &nbsp; <span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span>`;
+  const info = document.getElementById('detail-info');
+  info.innerHTML = `
+    <div class="field"><div class="lbl">Team Leader / Controller de CXC</div><div class="val">${r.A_controller} / ${r.B_analista}</div></div>
+    <div class="field highlight"><div class="lbl">Cartera Actual</div><div class="val"><span style="color:${carteraActualLive<=r.E?'#047857':'#b91c1c'}">${fmtMoneyM(carteraActualLive)}</span></div></div>
+    <div class="field"><div class="lbl">LTM Venta</div><div class="val">${fmtMoneyM(live.I)}</div></div>
+    <div class="field"><div class="lbl">Cart Mes Anterior</div><div class="val">${fmtMoneyM(r.J)}</div></div>
+    <div class="field"><div class="lbl">BE Pendiente</div><div class="val">${fmtMoneyM(live.M)}</div></div>
+    <div class="field highlight"><div class="lbl">Pronóstico Cart Q2</div><div class="val"><span style="color:${live.V<=base.V?'#047857':'#b91c1c'}">${fmtMoneyM(live.V)}</span></div></div>
+    <div class="field highlight"><div class="lbl">Pronóstico de DSO al Cierre del Q2</div><div class="val"><span style="color:${live.W<=base.W?'#047857':'#b91c1c'}">${fmtNum1(live.W)}d</span></div></div>
+  `;
+}
+
+// ============ EXPORT EXCEL (match exacto de la tabla del portal) ============
+function exportExcel() {
+  if (!state.rows.length) return;
+
+  // ====== Estilos reutilizables ======
+  const borderThin = { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} };
+  const borderHeader = { top:{style:'thin',color:{rgb:'FFFFFF'}}, bottom:{style:'thin',color:{rgb:'FFFFFF'}}, left:{style:'thin',color:{rgb:'FFFFFF'}}, right:{style:'thin',color:{rgb:'FFFFFF'}} };
+
+  const styleGroupGreen  = { fill:{fgColor:{rgb:'22C55E'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupOrange = { fill:{fgColor:{rgb:'EA580C'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupYellow = { fill:{fgColor:{rgb:'FACC15'}}, font:{bold:true, color:{rgb:'422006'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupBlue   = { fill:{fgColor:{rgb:'1E3A8A'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:11}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColGreen    = { fill:{fgColor:{rgb:'86EFAC'}}, font:{bold:true, color:{rgb:'14532D'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColOrange   = { fill:{fgColor:{rgb:'FED7AA'}}, font:{bold:true, color:{rgb:'7C2D12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColYellow   = { fill:{fgColor:{rgb:'FEF08A'}}, font:{bold:true, color:{rgb:'713F12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+
+  // Colores semáforo por status
+  const statusColors = {
+    excellent: 'DCFCE7', good: 'D1FAE5', warning: 'FEF9C3',
+    risk: 'FFEDD5', critical: 'FEE2E2', na: 'F1F5F9'
+  };
+  const statusFont = {
+    excellent: '14532D', good: '065F46', warning: '854D0E',
+    risk: '9A3412', critical: '991B1B', na: '475569'
+  };
+
+  // ====== Construir AoA (Array of Arrays) ======
+  // Fila 0: encabezados de bloque
+  // Fila 1: encabezados de columna
+  // Fila 2+: datos
+  const aoa = [
+    ['Status', 'Cliente', 'PRONÓSTICO', '', '', 'NODO DE VENTAS', '', '', 'NODO DE COBRANZA', '', ''],
+    ['', '', 'Pronóstico Cart Q2', 'LTM Total', 'Pronóstico DSO', 'BE Q2', 'Facturación Bruta Q2', 'BE Pendiente', 'Proyect Cobrar', 'Real Cobrado', 'Pend Cobro']
+  ];
+
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    const dsoDays = live.hasVenta && live.I !== 0 ? (live.V / live.I) * 360 : '';
+    const cliente = `${r.D_nombre}\n${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}`;
+    aoa.push([
+      r.Y_blocked ? 'Bloqueado' : 'Desbloqueado',
+      cliente,
+      live.V,
+      live.I,
+      dsoDays,
+      live.K,
+      r.L,
+      live.M,
+      live.Q,
+      live.R,
+      live.S
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ====== Aplicar estilos ======
+  // Fila 0 (encabezados de bloque)
+  const setStyle = (r, c, style) => {
+    const addr = XLSX.utils.encode_cell({r, c});
+    if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+    ws[addr].s = style;
+  };
+  // Status y Cliente: azul oscuro (ocupan ambas filas)
+  setStyle(0, 0, styleGroupBlue);
+  setStyle(0, 1, styleGroupBlue);
+  // PRONÓSTICO (verde)
+  for (let c = 2; c <= 4; c++) setStyle(0, c, styleGroupGreen);
+  // NODO DE VENTAS (naranja)
+  for (let c = 5; c <= 7; c++) setStyle(0, c, styleGroupOrange);
+  // NODO DE COBRANZA (amarillo)
+  for (let c = 8; c <= 10; c++) setStyle(0, c, styleGroupYellow);
+
+  // Fila 1 (encabezados de columna)
+  setStyle(1, 0, styleGroupBlue);
+  setStyle(1, 1, styleGroupBlue);
+  for (let c = 2; c <= 4; c++) setStyle(1, c, styleColGreen);
+  for (let c = 5; c <= 7; c++) setStyle(1, c, styleColOrange);
+  for (let c = 8; c <= 10; c++) setStyle(1, c, styleColYellow);
+
+  // Filas de datos
+  state.rows.forEach((r, i) => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    const rowIdx = 2 + i;
+    const statusBg = r.Y_blocked ? 'FEE2E2' : 'DCFCE7';
+    const statusTxt = r.Y_blocked ? '991B1B' : '14532D';
+
+    // Status
+    setStyle(rowIdx, 0, {
+      fill: {fgColor:{rgb: statusBg}},
+      font: {bold:true, color:{rgb: statusTxt}, sz:10},
+      alignment: {horizontal:'center', vertical:'center'},
+      border: borderThin
+    });
+    // Cliente
+    setStyle(rowIdx, 1, {
+      font: {sz:10},
+      alignment: {horizontal:'left', vertical:'center', wrapText:true},
+      border: borderThin
+    });
+    // Columnas verdes (Pronóstico) - fondo verde claro
+    for (let c = 2; c <= 4; c++) {
+      const cellStyle = {
+        fill: {fgColor:{rgb: c === 4 ? statusBg : 'F0FDF4'}},
+        font: {sz:10, bold: c === 4, color: c === 4 ? {rgb: statusTxt} : {rgb:'111827'}},
+        alignment: {horizontal: c === 4 ? 'center' : 'right', vertical:'center'},
+        border: borderThin,
+        numFmt: c === 4 ? '#,##0" d"' : '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
+      };
+      setStyle(rowIdx, c, cellStyle);
+    }
+    // Columnas naranjas (Ventas) - fondo amber
+    for (let c = 5; c <= 7; c++) {
+      setStyle(rowIdx, c, {
+        fill: {fgColor:{rgb: 'FFFBEB'}},
+        font: {sz:10},
+        alignment: {horizontal:'right', vertical:'center'},
+        border: borderThin,
+        numFmt: '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
+      });
+    }
+    // Columnas amarillas (Cobranza) - fondo amarillo muy claro
+    for (let c = 8; c <= 10; c++) {
+      setStyle(rowIdx, c, {
+        fill: {fgColor:{rgb: 'FEFCE8'}},
+        font: {sz:10},
+        alignment: {horizontal:'right', vertical:'center'},
+        border: borderThin,
+        numFmt: '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"'
+      });
+    }
+  });
+
+  // ====== Merges (encabezados de bloque) ======
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:1,c:0}},   // Status (2 filas)
+    {s:{r:0,c:1}, e:{r:1,c:1}},   // Cliente (2 filas)
+    {s:{r:0,c:2}, e:{r:0,c:4}},   // PRONÓSTICO
+    {s:{r:0,c:5}, e:{r:0,c:7}},   // NODO DE VENTAS
+    {s:{r:0,c:8}, e:{r:0,c:10}}   // NODO DE COBRANZA
+  ];
+
+  // ====== Anchos de columna ======
+  ws['!cols'] = [
+    {wch: 13},  // Status
+    {wch: 50},  // Cliente
+    {wch: 14},  // Pronóstico Cart Q2
+    {wch: 13},  // LTM Total
+    {wch: 13},  // Pronóstico DSO
+    {wch: 11},  // BE Q2
+    {wch: 13},  // Facturación Bruta Q2
+    {wch: 13},  // BE Pendiente
+    {wch: 13},  // Proyect Cobrar
+    {wch: 12},  // Real Cobrado
+    {wch: 12}   // Pend Cobro
+  ];
+
+  // ====== Alturas de fila ======
+  const rowHeights = [
+    {hpt: 24},  // Encabezado de bloque
+    {hpt: 36}   // Encabezado de columna
+  ];
+  for (let i = 0; i < state.rows.length; i++) rowHeights.push({hpt: 28});
+  ws['!rows'] = rowHeights;
+
+  // ====== Congelar paneles (primeras 2 filas y primeras 2 columnas) ======
+  ws['!freeze'] = { xSplit: 2, ySplit: 2 };
+
+  // ====== Crear workbook y descargar ======
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pronóstico Q2');
+  const fechaArchivo = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Pronostico_Cartera_Q2_${fechaArchivo}.xlsx`);
+}
+
+// ============ DATOS PRECARGADOS (generados 18/05/2026 23:22) ============
+const EMBEDDED_DATA_B64 = "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";
+const EMBEDDED_DATA_GEN_TIME = "27/05/2026 10:38";
+
+async function loadEmbeddedData() {
+  try {
+    // Decodificar base64 → bytes
+    const bytes = Uint8Array.from(atob(EMBEDDED_DATA_B64), c => c.charCodeAt(0));
+    // Descomprimir gzip
+    const stream = new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
+    const text = await new Response(stream).text();
+    const data = JSON.parse(text);
+
+    // Cargar rows (re-asignar idx para asegurar consistencia)
+    state.rows = data.rows.map((r, i) => Object.assign({}, r, {idx: i}));
+    state.baseValues = {};
+    state.rows.forEach(r => {
+      state.baseValues[r.idx] = { U: r.U, V: r.V, W: r.W, K: r.K, Q: r.Q, R: r.R, S: r.S };
+    });
+    state.overrides = {};
+
+    // Cargar datos ZREPO
+    if (data.zrepoByClientMonth) state.zrepoByClientMonth = data.zrepoByClientMonth;
+    if (data.zrepoByMonth) state.zrepoByMonth = data.zrepoByMonth;
+
+    // Inicializar UI
+    initFilters();
+    document.getElementById('initial-msg').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    // Ocultar botones de carga (datos ya cargados)
+    const btnGroup = document.querySelector('.upload-btn-group');
+    if (btnGroup) btnGroup.style.display = 'none';
+    // Agregar badge de "Datos al ..." en la subtitle
+    const subtitle = document.querySelector('.subtitle');
+    if (subtitle) {
+      const badge = document.createElement('span');
+      badge.style.cssText = 'margin-left:8px;font-size:9px;color:#6b7280;font-weight:600;background:#f3f4f6;padding:2px 8px;border-radius:3px;display:inline-block;';
+      badge.textContent = '📅 Datos al ' + EMBEDDED_DATA_GEN_TIME;
+      subtitle.appendChild(badge);
+    }
+    applyFilters();
+  } catch (e) {
+    console.error('Error cargando datos embebidos:', e);
+    // Si falla la descompresión, mostrar el estado de upload normal
+    const msg = document.getElementById('initial-msg');
+    if (msg) {
+      msg.innerHTML = '<div class="icon">⚠️</div>' +
+        '<div style="margin-top:10px;font-size:14px;color:#b91c1c;">No se pudieron cargar los datos precargados</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:6px;">' + e.message + '</div>';
+    }
+  }
+}
+
+// Ejecutar al cargar la página
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadEmbeddedData);
+} else {
+  loadEmbeddedData();
+}
+
+</script>
+</body>
+</html>
