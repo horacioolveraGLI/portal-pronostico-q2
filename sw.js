@@ -1,6 +1,6 @@
 // Service Worker básico para Portal Pronóstico Q2
 // Hace la app instalable y guarda el index.html en caché para arranque offline
-const CACHE = 'pronostico-q2-v3';
+const CACHE = 'pronostico-q2-v4';
 const ASSETS = [
   './',
   './index.html',

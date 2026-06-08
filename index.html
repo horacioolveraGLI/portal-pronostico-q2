@@ -296,7 +296,8 @@
     border-top: 3px solid #b45309; /* color ámbar para hilarlo con la fila "Selección Filtrada" */
   }
   .detail-section.active { display: block; }
-  .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  /* Barra superior del detalle del cliente (nombre + botón cerrar): oculta a petición del usuario */
+  .detail-header { display: none !important; }
   .detail-header h3 { color: #0b3d91; font-size: 13px; }
   .detail-info { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
   .detail-info .field { padding: 4px 7px; background: #f9fafb; border-radius: 4px; border-left: 3px solid #cbd5e1; min-width: 0; }
