@@ -2662,7 +2662,7 @@ try {
     {
       selector: 'h1', badge: 'Bienvenida',
       title: 'Pronóstico',
-      desc: 'Bienvenido. Aquí consultas y ajustas el pronóstico de cierre del trimestre. Este recorrido te muestra qué puedes ver, modificar y descargar.'
+      desc: 'Aquí consultas y ajustas el pronóstico de cierre del trimestre. Este recorrido te muestra qué puedes ver, modificar y descargar.'
     },
     {
       selector: '.kpi-row, .kpi-section, header + div, .header-bar + div',
@@ -2747,7 +2747,7 @@ try {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }
 
-  // Selección de voz: HOMBRE JOVEN LATINO con timbre claro en español.
+  // Selección de voz: NEUTRA / CLARA tipo Google es-US (sin acento marcado, tono uniforme).
   // Si el usuario eligió una voz específica desde voces.html, se respeta esa.
   function pickVoice(){
     if (!voices.length) return null;
@@ -2759,48 +2759,20 @@ try {
         if (exact) return exact;
       }
     } catch(e) {}
-    const isLatin = (lang) => /^es-(MX|US|419|CO|AR|CL|PE|VE|UY|EC|CR|BO|PA|DO|GT|HN|NI|PY|SV|PR)/i.test(lang);
-    // Voces masculinas JÓVENES (timbre claro/juvenil) en orden de preferencia.
-    // Estos son los nombres específicos de las voces "Natural" de Microsoft Edge.
-    const youngMaleOrder = [
-      /Mateo/i,        // es-419 / es-UY — voz joven multi-país, muy clara
-      /Tomas|Tomás/i,  // es-AR — argentino joven
-      /Alex/i,         // es-PE — peruano joven
-      /Sebastian|Sebastián/i, // es-VE — venezolano joven
-      /Gonzalo/i,      // es-CO — colombiano joven
-      /Andres|Andrés/i,// es-CO — joven
-      /Jorge/i,        // es-MX — mexicano (ligeramente más maduro pero claro)
-      /Lorenzo/i,      // es-CL — chileno joven
-      /Yago/i,         // joven
-      /Joaquin|Joaquín/i, // joven
-      /Diego/i,        // joven
-      /Mario/i,        // joven
+    const preferences = [
+      // 1) Google español de Estados Unidos — voz NEUTRA por excelencia (sin acento regional marcado)
+      v => /Google/i.test(v.name) && /es-US/i.test(v.lang),
+      // 2) Cualquier otra voz Google en español (también suelen ser neutras)
+      v => /Google/i.test(v.name) && /^es/i.test(v.lang),
+      // 3) Voces locales del sistema (no Natural/Online) en español — tono más plano/uniforme
+      v => !/Natural|Online/i.test(v.name) && /Sabina/i.test(v.name),         // Microsoft Sabina (Windows local, neutra mexicana)
+      v => !/Natural|Online/i.test(v.name) && /Pablo|Helena|Laura/i.test(v.name) && /^es/i.test(v.lang), // Voces locales de España
+      v => !/Natural|Online/i.test(v.name) && /^es-MX/i.test(v.lang),         // Cualquier voz local mexicana
+      v => !/Natural|Online/i.test(v.name) && /^es-US/i.test(v.lang),         // Cualquier voz local es-US
+      v => !/Natural|Online/i.test(v.name) && /^es/i.test(v.lang),            // Cualquier voz local en español
+      // 4) Fallback final: lo que haya en español
+      v => /^es/i.test(v.lang)
     ];
-    // Cualquier otra voz masculina como respaldo
-    const anyMale = /(Pablo|Salvador|Carlos|Roberto|Emilio|Luis|Federico|Sergio|Victor|Víctor|Marcelo|Liberto|Juan|Daniel|Javier|Alvaro|Álvaro)/i;
-
-    const preferences = [];
-    // 1) Cada voz joven (Natural/Online primero, en su orden de preferencia, lang latino)
-    for (const nameRx of youngMaleOrder) {
-      preferences.push(v => /Natural|Online/i.test(v.name) && nameRx.test(v.name) && isLatin(v.lang));
-    }
-    // 2) La misma lista sin restringir a Natural/Online
-    for (const nameRx of youngMaleOrder) {
-      preferences.push(v => nameRx.test(v.name) && isLatin(v.lang));
-    }
-    // 3) Voces masculinas jóvenes en español de cualquier región
-    for (const nameRx of youngMaleOrder) {
-      preferences.push(v => nameRx.test(v.name) && /^es/i.test(v.lang));
-    }
-    // 4) Cualquier otra voz masculina latina
-    preferences.push(v => /Natural|Online/i.test(v.name) && anyMale.test(v.name) && isLatin(v.lang));
-    preferences.push(v => anyMale.test(v.name) && isLatin(v.lang));
-    preferences.push(v => anyMale.test(v.name) && /^es/i.test(v.lang));
-    // 5) Fallback final
-    preferences.push(v => /Natural|Online/i.test(v.name) && isLatin(v.lang));
-    preferences.push(v => isLatin(v.lang));
-    preferences.push(v => /^es/i.test(v.lang));
-
     for (const test of preferences) {
       const found = voices.find(test);
       if (found) return found;
@@ -2808,21 +2780,26 @@ try {
     return null;
   }
 
-  // Pre-procesa el texto para que la narración sea fluida y no entrecortada.
-  // Los puntos del motor TTS producen pausas largas (~600ms); las comas ~250ms.
-  // Convertimos puntos internos en comas y eliminamos saltos de línea / espacios extra.
+  // Pre-procesa el texto para una narración FLUIDA y SIN ACENTUACIONES marcadas.
+  // El motor TTS modula tono con signos de exclamación/interrogación, puntos, paréntesis,
+  // mayúsculas iniciales y comillas. Los eliminamos para un flujo uniforme.
   function prepText(text){
     return String(text || '')
-      .replace(/\s*\n+\s*/g, ' ')      // saltos de línea → espacio
-      .replace(/\s{2,}/g, ' ')         // colapsar espacios múltiples
-      .replace(/;\s*/g, ', ')          // ; → coma
-      .replace(/:\s+/g, ', ')          // : seguido de espacio → coma
-      .replace(/\.\s+(?=[a-záéíóúüñ])/g, ', ') // punto + minúscula = oración fluida → coma
-      .replace(/\.\s+(?=[A-ZÁÉÍÓÚÜÑ])/g, ', ') // punto + mayúscula también → coma (mantiene flujo)
-      .replace(/,\s*,/g, ',')          // comas dobles → una
-      .replace(/,([^\s])/g, ', $1')    // asegurar espacio tras coma
-      .replace(/\s+,/g, ',')           // sin espacio antes de coma
-      .replace(/\.$/, '')              // quitar punto final
+      .replace(/\s*\n+\s*/g, ' ')          // saltos de línea → espacio
+      .replace(/\s{2,}/g, ' ')             // colapsar espacios múltiples
+      // Quitar TODOS los signos de énfasis que el TTS interpreta como modulación tonal
+      .replace(/[¡!¿?]/g, '')              // exclamación e interrogación → fuera
+      .replace(/["'«»“”‘’]/g, '')          // comillas → fuera (causan énfasis)
+      .replace(/[()[\]{}]/g, ' ')          // paréntesis y corchetes → espacio
+      .replace(/[—–−]/g, ' ')              // guiones largos → espacio
+      .replace(/[·•]/g, ' ')               // bullets → espacio
+      // Suavizar pausas
+      .replace(/;\s*/g, ' ')               // ; → solo espacio (sin pausa)
+      .replace(/:\s+/g, ' ')               // : → solo espacio
+      .replace(/\.\s+/g, ' ')              // puntos internos → espacio (cero pausa)
+      .replace(/,\s*/g, ' ')               // comas → espacio (eliminar TODAS las pausas)
+      .replace(/\s{2,}/g, ' ')             // colapsar de nuevo
+      .replace(/\.$/, '')                  // quitar punto final
       .trim();
   }
 
@@ -2835,9 +2812,9 @@ try {
     setTimeout(() => {
       if (sessionId !== mySid) return; // sesión ya cambió, abortar
       const u = new SpeechSynthesisUtterance(prepText(text));
-      u.lang = 'es-MX';
-      u.rate = 1.1;     // ágil pero sin atropellar
-      u.pitch = 1.0;    // natural — evita el "lift" que sonaba artificial
+      u.lang = 'es-US';   // neutral latino
+      u.rate = 1.05;      // fluido, sin atropellar
+      u.pitch = 0.95;     // ligeramente plano para reducir modulación tonal
       u.volume = 1;
       const v = pickVoice();
       if (v) u.voice = v;
@@ -2951,8 +2928,8 @@ try {
       $('tour-prev').disabled = (idx === 0);
       $('tour-next').textContent = (idx === steps.length - 1) ? 'Cerrar ✓' : 'Siguiente →';
 
-      // Solo narramos la descripción; el título ya está visible en la caja
-      const narration = s.desc;
+      // Narramos primero el encabezado/título y luego la descripción
+      const narration = s.title + '. ' + s.desc;
       const fallbackDuration = estimateDuration(narration);
       startProgressBar(fallbackDuration);
 
