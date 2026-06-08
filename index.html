@@ -714,6 +714,33 @@ td.dso-highlight {
   transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 
+/* ============ RESIZE MANUAL DE COLUMNAS Y ALTO DE FILAS ============ */
+:root { --row-padding: 4px; }
+tbody td { padding-top: var(--row-padding) !important; padding-bottom: var(--row-padding) !important; }
+thead th { position: relative; }
+.col-resize {
+  position: absolute;
+  top: 0; right: -3px; bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+.col-resize:hover {
+  background: rgba(245, 158, 11, 0.55);
+  width: 5px;
+  right: -2px;
+}
+.col-resize.active {
+  background: rgba(245, 158, 11, 0.85) !important;
+  width: 4px;
+  right: -2px;
+}
+body.col-resizing { cursor: col-resize !important; }
+body.col-resizing * { cursor: col-resize !important; user-select: none !important; }
+
 /* Tooltip global flotante — diseño claro y unificado */
 .has-tip { cursor: help; }
 #global-tip {
@@ -1124,6 +1151,11 @@ td.dso-highlight {
       <button type="button" id="zoom-out" title="Reducir">A−</button>
       <button type="button" id="zoom-reset" title="Restablecer tamaño">100%</button>
       <button type="button" id="zoom-in" title="Aumentar">A+</button>
+    </div>
+    <div class="zoom-control" title="Ajustar alto de las filas">
+      <button type="button" id="row-h-less" title="Filas más compactas">≡−</button>
+      <button type="button" id="row-h-reset" title="Restablecer alto" style="font-size:9px;padding:3px 6px;">Alto</button>
+      <button type="button" id="row-h-more" title="Filas más altas">≡+</button>
     </div>
     <span class="legend-inline">
       <span><span class="sw" style="background:#10b981"></span>≤60d</span>
@@ -2532,6 +2564,90 @@ if (document.readyState === 'loading') {
 // ============ TOOLTIP GLOBAL FLOTANTE ============
 // Maneja elementos .has-tip mostrando un div flotante con su atributo data-tip.
 // El div se crea una sola vez y se reposiciona dinámicamente.
+// ============ RESIZE DE COLUMNAS Y ALTO DE FILAS ============
+(function setupColumnResize(){
+  const KEY = 'col-widths-v1';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
+  const setW = (th, w) => {
+    th.style.width = w + 'px';
+    th.style.minWidth = w + 'px';
+    th.style.maxWidth = w + 'px';
+  };
+  function applySaved() {
+    document.querySelectorAll('table#data-table thead th[data-sort]').forEach(th => {
+      const key = th.getAttribute('data-sort');
+      if (saved[key]) setW(th, saved[key]);
+    });
+  }
+  function attachHandles() {
+    document.querySelectorAll('table#data-table thead th').forEach(th => {
+      if (th.querySelector(':scope > .col-resize')) return;
+      const handle = document.createElement('div');
+      handle.className = 'col-resize';
+      th.appendChild(handle);
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        handle.classList.add('active');
+        document.body.classList.add('col-resizing');
+        const startX = e.clientX;
+        const startW = th.offsetWidth;
+        const onMove = (ev) => {
+          const newW = Math.max(28, startW + (ev.clientX - startX));
+          setW(th, newW);
+        };
+        const onUp = () => {
+          handle.classList.remove('active');
+          document.body.classList.remove('col-resizing');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          const key = th.getAttribute('data-sort');
+          if (key) {
+            saved[key] = th.offsetWidth;
+            try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e) {}
+          }
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      // Doble click resetea esa columna
+      handle.addEventListener('dblclick', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        th.style.width = ''; th.style.minWidth = ''; th.style.maxWidth = '';
+        const key = th.getAttribute('data-sort');
+        if (key && saved[key]) {
+          delete saved[key];
+          try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e) {}
+        }
+      });
+    });
+  }
+  // Aplicar al cargar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { attachHandles(); applySaved(); });
+  } else {
+    attachHandles(); applySaved();
+  }
+})();
+
+(function setupRowHeight(){
+  const KEY = 'row-height-v1';
+  let h = parseFloat(localStorage.getItem(KEY) || '4');
+  if (isNaN(h)) h = 4;
+  const apply = () => document.documentElement.style.setProperty('--row-padding', h + 'px');
+  apply();
+  const bind = () => {
+    const less = document.getElementById('row-h-less');
+    const more = document.getElementById('row-h-more');
+    const reset = document.getElementById('row-h-reset');
+    if (less) less.addEventListener('click', () => { h = Math.max(0, h - 1); apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
+    if (more) more.addEventListener('click', () => { h = Math.min(20, h + 1); apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
+    if (reset) reset.addEventListener('click', () => { h = 4; apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+  else bind();
+})();
+
 (function setupGlobalTip(){
   let tip = null;
   const ensureTip = () => {
