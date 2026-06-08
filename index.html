@@ -639,7 +639,8 @@
   /* Variable de zoom para KPIs (controlada por los botones A+/A-) */
   :root { --kpi-zoom: 1.15; }
   #main-content .kpi-card { padding: calc(4px * var(--kpi-zoom)) calc(6px * var(--kpi-zoom)); }
-  #main-content .kpi-card .label { font-size: calc(12px * var(--kpi-zoom)); letter-spacing: 0.2px; }
+  /* Etiquetas KPI: 20% MÁS GRANDES que el nombre del cliente (13px * 1.2 = 15.6px) */
+  #main-content .kpi-card .label { font-size: calc(13px * 1.2 * var(--kpi-zoom)); letter-spacing: 0.2px; }
   /* Nombre y client-info del cliente: truncar con "..." si la columna se hace estrecha */
   tbody td.text b, tbody td.text .client-info {
     display: block;
@@ -648,6 +649,14 @@
     white-space: nowrap;
     max-width: 100%;
   }
+  /* === ZOOM DE DATOS (control independiente del zoom de KPI) ===
+     Aplica solo a celdas numéricas/inputs, no al texto del cliente. */
+  :root { --data-zoom: 1; }
+  tbody td:not(.text) { font-size: calc(13px * var(--data-zoom)); }
+  tbody td.blue-cell { font-size: calc(12px * var(--data-zoom)); }
+  input.edit { font-size: calc(13px * var(--data-zoom)); }
+  .m-suffix { font-size: calc(9px * var(--data-zoom)); }
+  #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom) * var(--data-zoom)); line-height: 1.1; }
   #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom)); line-height: 1.1; }
   #main-content .kpi-card .delta { font-size: calc(10px * var(--kpi-zoom)); line-height: 1.1; }
   #main-content .row-tag { font-size: calc(11px * var(--kpi-zoom)); padding: calc(3px * var(--kpi-zoom)) calc(10px * var(--kpi-zoom)); }
@@ -1174,6 +1183,11 @@ td.dso-highlight {
       <button type="button" id="zoom-out" title="Reducir">A−</button>
       <button type="button" id="zoom-reset" title="Restablecer tamaño">100%</button>
       <button type="button" id="zoom-in" title="Aumentar">A+</button>
+    </div>
+    <div class="zoom-control" title="Ajustar tamaño de los datos numéricos de la tabla">
+      <button type="button" id="data-zoom-out" title="Reducir datos">D−</button>
+      <button type="button" id="data-zoom-reset" title="Restablecer tamaño de datos">100%</button>
+      <button type="button" id="data-zoom-in" title="Aumentar datos">D+</button>
     </div>
     <button type="button" id="reset-widths-btn" title="Restablecer anchos originales de columnas">↔ Reset anchos</button>
     <span class="legend-inline">
@@ -1717,6 +1731,31 @@ document.querySelectorAll('thead th.sortable').forEach(th => {
   if (zin)  zin.addEventListener('click',  () => setZoom(readZoom() + 0.1));
   if (zout) zout.addEventListener('click', () => setZoom(readZoom() - 0.1));
   if (zres) zres.addEventListener('click', () => setZoom(1.15));
+})();
+
+// ============ ZOOM DE DATOS (D-/100%/D+) ============
+(function() {
+  const root = document.documentElement;
+  const KEY = 'data-zoom-v1';
+  function clamp(z) { return Math.max(0.7, Math.min(2.5, z)); }
+  function readDz() {
+    const v = parseFloat(localStorage.getItem(KEY) || '1');
+    return isNaN(v) ? 1 : clamp(v);
+  }
+  function setDz(z) {
+    const c = clamp(z);
+    root.style.setProperty('--data-zoom', c);
+    try { localStorage.setItem(KEY, c.toFixed(2)); } catch(e) {}
+    const reset = document.getElementById('data-zoom-reset');
+    if (reset) reset.textContent = Math.round(c * 100) + '%';
+  }
+  setDz(readDz());
+  const dzin  = document.getElementById('data-zoom-in');
+  const dzout = document.getElementById('data-zoom-out');
+  const dzres = document.getElementById('data-zoom-reset');
+  if (dzin)  dzin.addEventListener('click',  () => setDz(readDz() + 0.1));
+  if (dzout) dzout.addEventListener('click', () => setDz(readDz() - 0.1));
+  if (dzres) dzres.addEventListener('click', () => setDz(1));
 })();
 
 // ============ RENDER TABLE ============
