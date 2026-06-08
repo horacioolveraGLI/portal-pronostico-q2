@@ -2799,6 +2799,24 @@ try {
     return null;
   }
 
+  // Pre-procesa el texto para que la narración sea fluida y no entrecortada.
+  // Los puntos del motor TTS producen pausas largas (~600ms); las comas ~250ms.
+  // Convertimos puntos internos en comas y eliminamos saltos de línea / espacios extra.
+  function prepText(text){
+    return String(text || '')
+      .replace(/\s*\n+\s*/g, ' ')      // saltos de línea → espacio
+      .replace(/\s{2,}/g, ' ')         // colapsar espacios múltiples
+      .replace(/;\s*/g, ', ')          // ; → coma
+      .replace(/:\s+/g, ', ')          // : seguido de espacio → coma
+      .replace(/\.\s+(?=[a-záéíóúüñ])/g, ', ') // punto + minúscula = oración fluida → coma
+      .replace(/\.\s+(?=[A-ZÁÉÍÓÚÜÑ])/g, ', ') // punto + mayúscula también → coma (mantiene flujo)
+      .replace(/,\s*,/g, ',')          // comas dobles → una
+      .replace(/,([^\s])/g, ', $1')    // asegurar espacio tras coma
+      .replace(/\s+,/g, ',')           // sin espacio antes de coma
+      .replace(/\.$/, '')              // quitar punto final
+      .trim();
+  }
+
   function speak(text, onEnd){
     if (!voiceOn || !window.speechSynthesis) { if (onEnd) onEnd(); return; }
     // Capturar el sessionId actual; si cambia antes de onend, el callback se ignora
@@ -2807,10 +2825,10 @@ try {
     try { window.speechSynthesis.cancel(); } catch(e){}
     setTimeout(() => {
       if (sessionId !== mySid) return; // sesión ya cambió, abortar
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(prepText(text));
       u.lang = 'es-MX';
-      u.rate = 1.15;    // velocidad ágil y clara
-      u.pitch = 1.05;   // ligero "lift" para timbre joven (no grave, no chillón)
+      u.rate = 1.1;     // ágil pero sin atropellar
+      u.pitch = 1.0;    // natural — evita el "lift" que sonaba artificial
       u.volume = 1;
       const v = pickVoice();
       if (v) u.voice = v;
