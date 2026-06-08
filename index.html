@@ -2747,26 +2747,51 @@ try {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }
 
-  // Selección de la mejor voz en español - prioriza voces MASCULINAS / UNISEX latinas
+  // Selección de voz: HOMBRE JOVEN LATINO con timbre claro en español
   function pickVoice(){
     if (!voices.length) return null;
-    const isLatin = (lang) => /^es-(MX|US|419|CO|AR|CL|PE|VE)/i.test(lang);
-    // Nombres conocidos de voces masculinas en español (Microsoft, Google, Apple)
-    const maleNames = /(Jorge|Mateo|Diego|Carlos|Andres|Andrés|Pablo|Salvador|Tomas|Tomás|Lorenzo|Sergio|Roberto|Emilio|Luis|Federico|Mario|Yago|Victor|Víctor|Joaquin|Joaquín|Marcelo|Sebastian|Sebastián|Liberto|Juan|Daniel|Javier|Alvaro|Álvaro)/i;
-    const preferences = [
-      // 1) Voces MASCULINAS Natural/Online latinas (Edge) — la mejor calidad
-      v => /Natural|Online/i.test(v.name) && maleNames.test(v.name) && isLatin(v.lang),
-      // 2) Cualquier voz masculina con acento latino
-      v => maleNames.test(v.name) && isLatin(v.lang),
-      // 3) Voces masculinas en español (cualquier región)
-      v => maleNames.test(v.name) && /^es/i.test(v.lang),
-      // 4) Voz UNISEX/NEUTRA: Google es-US (tono neutral, no claramente femenino)
-      v => /Google/i.test(v.name) && /es-US/i.test(v.lang),
-      // 5) Fallback: cualquier Natural/Online latina
-      v => /Natural|Online/i.test(v.name) && isLatin(v.lang),
-      v => isLatin(v.lang),
-      v => /^es/i.test(v.lang)
+    const isLatin = (lang) => /^es-(MX|US|419|CO|AR|CL|PE|VE|UY|EC|CR|BO|PA|DO|GT|HN|NI|PY|SV|PR)/i.test(lang);
+    // Voces masculinas JÓVENES (timbre claro/juvenil) en orden de preferencia.
+    // Estos son los nombres específicos de las voces "Natural" de Microsoft Edge.
+    const youngMaleOrder = [
+      /Mateo/i,        // es-419 / es-UY — voz joven multi-país, muy clara
+      /Tomas|Tomás/i,  // es-AR — argentino joven
+      /Alex/i,         // es-PE — peruano joven
+      /Sebastian|Sebastián/i, // es-VE — venezolano joven
+      /Gonzalo/i,      // es-CO — colombiano joven
+      /Andres|Andrés/i,// es-CO — joven
+      /Jorge/i,        // es-MX — mexicano (ligeramente más maduro pero claro)
+      /Lorenzo/i,      // es-CL — chileno joven
+      /Yago/i,         // joven
+      /Joaquin|Joaquín/i, // joven
+      /Diego/i,        // joven
+      /Mario/i,        // joven
     ];
+    // Cualquier otra voz masculina como respaldo
+    const anyMale = /(Pablo|Salvador|Carlos|Roberto|Emilio|Luis|Federico|Sergio|Victor|Víctor|Marcelo|Liberto|Juan|Daniel|Javier|Alvaro|Álvaro)/i;
+
+    const preferences = [];
+    // 1) Cada voz joven (Natural/Online primero, en su orden de preferencia, lang latino)
+    for (const nameRx of youngMaleOrder) {
+      preferences.push(v => /Natural|Online/i.test(v.name) && nameRx.test(v.name) && isLatin(v.lang));
+    }
+    // 2) La misma lista sin restringir a Natural/Online
+    for (const nameRx of youngMaleOrder) {
+      preferences.push(v => nameRx.test(v.name) && isLatin(v.lang));
+    }
+    // 3) Voces masculinas jóvenes en español de cualquier región
+    for (const nameRx of youngMaleOrder) {
+      preferences.push(v => nameRx.test(v.name) && /^es/i.test(v.lang));
+    }
+    // 4) Cualquier otra voz masculina latina
+    preferences.push(v => /Natural|Online/i.test(v.name) && anyMale.test(v.name) && isLatin(v.lang));
+    preferences.push(v => anyMale.test(v.name) && isLatin(v.lang));
+    preferences.push(v => anyMale.test(v.name) && /^es/i.test(v.lang));
+    // 5) Fallback final
+    preferences.push(v => /Natural|Online/i.test(v.name) && isLatin(v.lang));
+    preferences.push(v => isLatin(v.lang));
+    preferences.push(v => /^es/i.test(v.lang));
+
     for (const test of preferences) {
       const found = voices.find(test);
       if (found) return found;
@@ -2784,8 +2809,8 @@ try {
       if (sessionId !== mySid) return; // sesión ya cambió, abortar
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'es-MX';
-      u.rate = 1.15;    // velocidad más ágil pero clara
-      u.pitch = 0.9;    // ligeramente más grave para tono masculino / unisex
+      u.rate = 1.15;    // velocidad ágil y clara
+      u.pitch = 1.05;   // ligero "lift" para timbre joven (no grave, no chillón)
       u.volume = 1;
       const v = pickVoice();
       if (v) u.voice = v;
