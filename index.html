@@ -2928,18 +2928,24 @@ try {
       $('tour-prev').disabled = (idx === 0);
       $('tour-next').textContent = (idx === steps.length - 1) ? 'Cerrar ✓' : 'Siguiente →';
 
-      // Narramos primero el encabezado/título y luego la descripción
-      const narration = s.title + '. ' + s.desc;
-      const fallbackDuration = estimateDuration(narration);
+      // Narramos primero el TÍTULO del módulo, hacemos una pausa de "punto y aparte" (~650ms),
+      // y luego la DESCRIPCIÓN.
+      const TITLE_PAUSE_MS = 650;
+      const fallbackDuration = estimateDuration(s.title + ' ' + s.desc) + TITLE_PAUSE_MS;
       startProgressBar(fallbackDuration);
 
       if (voiceOn && window.speechSynthesis) {
-        speak(narration, () => {
-          // Pausa corta al terminar para que se sienta dinámico
-          if (!isPaused) {
-            setProgress(100);
-            advanceTimer = setTimeout(() => { if (!isPaused) advance(); }, 350);
-          }
+        speak(s.title, () => {
+          if (isPaused) return;
+          setTimeout(() => {
+            if (isPaused) return;
+            speak(s.desc, () => {
+              if (!isPaused) {
+                setProgress(100);
+                advanceTimer = setTimeout(() => { if (!isPaused) advance(); }, 350);
+              }
+            });
+          }, TITLE_PAUSE_MS);
         });
       } else {
         scheduleAdvance(fallbackDuration + 200);
