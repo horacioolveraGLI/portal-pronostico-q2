@@ -715,13 +715,17 @@ td.dso-highlight {
 }
 
 /* ============ RESIZE MANUAL DE COLUMNAS Y ALTO DE FILAS ============ */
-:root { --row-padding: 4px; }
-tbody td { padding-top: var(--row-padding) !important; padding-bottom: var(--row-padding) !important; }
+:root { --row-h-extra: 0px; }
+/* Aplicar el alto extra SOLO a celdas de datos no editables (no .input-cell) */
+tbody tr td:not(.input-cell) {
+  padding-top: calc(4px + var(--row-h-extra));
+  padding-bottom: calc(4px + var(--row-h-extra));
+}
 thead th { position: relative; }
 .col-resize {
   position: absolute;
   top: 0; right: -3px; bottom: 0;
-  width: 7px;
+  width: 6px;
   cursor: col-resize;
   user-select: none;
   z-index: 10;
@@ -730,16 +734,17 @@ thead th { position: relative; }
 }
 .col-resize:hover {
   background: rgba(245, 158, 11, 0.55);
-  width: 5px;
-  right: -2px;
 }
 .col-resize.active {
   background: rgba(245, 158, 11, 0.85) !important;
-  width: 4px;
-  right: -2px;
 }
 body.col-resizing { cursor: col-resize !important; }
 body.col-resizing * { cursor: col-resize !important; user-select: none !important; }
+/* Cuando una columna se redimensionó manualmente, ignorar los min/max-width hardcoded */
+thead th.col-manual, tbody td.col-manual {
+  min-width: 0 !important;
+  max-width: none !important;
+}
 
 /* Tooltip global flotante — diseño claro y unificado */
 .has-tip { cursor: help; }
@@ -2566,13 +2571,17 @@ if (document.readyState === 'loading') {
 // El div se crea una sola vez y se reposiciona dinámicamente.
 // ============ RESIZE DE COLUMNAS Y ALTO DE FILAS ============
 (function setupColumnResize(){
-  const KEY = 'col-widths-v1';
+  const KEY = 'col-widths-v2';
+  // Limpiar versión vieja que pudo haber quedado con widths corruptos
+  try { localStorage.removeItem('col-widths-v1'); } catch(e) {}
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
   const setW = (th, w) => {
-    th.style.width = w + 'px';
-    th.style.minWidth = w + 'px';
-    th.style.maxWidth = w + 'px';
+    // Usar !important para sobreescribir reglas como .col-status que tienen min/max hardcoded
+    th.style.setProperty('width', w + 'px', 'important');
+    th.style.setProperty('min-width', w + 'px', 'important');
+    th.style.setProperty('max-width', w + 'px', 'important');
+    th.classList.add('col-manual');
   };
   function applySaved() {
     document.querySelectorAll('table#data-table thead th[data-sort]').forEach(th => {
@@ -2593,7 +2602,7 @@ if (document.readyState === 'loading') {
         const startX = e.clientX;
         const startW = th.offsetWidth;
         const onMove = (ev) => {
-          const newW = Math.max(28, startW + (ev.clientX - startX));
+          const newW = Math.max(20, startW + (ev.clientX - startX));
           setW(th, newW);
         };
         const onUp = () => {
@@ -2610,10 +2619,13 @@ if (document.readyState === 'loading') {
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
       });
-      // Doble click resetea esa columna
+      // Doble clic resetea esa columna
       handle.addEventListener('dblclick', (e) => {
         e.preventDefault(); e.stopPropagation();
-        th.style.width = ''; th.style.minWidth = ''; th.style.maxWidth = '';
+        th.style.removeProperty('width');
+        th.style.removeProperty('min-width');
+        th.style.removeProperty('max-width');
+        th.classList.remove('col-manual');
         const key = th.getAttribute('data-sort');
         if (key && saved[key]) {
           delete saved[key];
@@ -2631,18 +2643,20 @@ if (document.readyState === 'loading') {
 })();
 
 (function setupRowHeight(){
-  const KEY = 'row-height-v1';
-  let h = parseFloat(localStorage.getItem(KEY) || '4');
-  if (isNaN(h)) h = 4;
-  const apply = () => document.documentElement.style.setProperty('--row-padding', h + 'px');
+  const KEY = 'row-h-extra-v1';
+  // Limpiar key vieja que pudo haber dejado padding raro
+  try { localStorage.removeItem('row-height-v1'); } catch(e) {}
+  let extra = parseFloat(localStorage.getItem(KEY) || '0');
+  if (isNaN(extra)) extra = 0;
+  const apply = () => document.documentElement.style.setProperty('--row-h-extra', extra + 'px');
   apply();
   const bind = () => {
     const less = document.getElementById('row-h-less');
     const more = document.getElementById('row-h-more');
     const reset = document.getElementById('row-h-reset');
-    if (less) less.addEventListener('click', () => { h = Math.max(0, h - 1); apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
-    if (more) more.addEventListener('click', () => { h = Math.min(20, h + 1); apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
-    if (reset) reset.addEventListener('click', () => { h = 4; apply(); try{localStorage.setItem(KEY, String(h));}catch(e){} });
+    if (less) less.addEventListener('click', () => { extra = Math.max(-3, extra - 1); apply(); try{localStorage.setItem(KEY, String(extra));}catch(e){} });
+    if (more) more.addEventListener('click', () => { extra = Math.min(16, extra + 1); apply(); try{localStorage.setItem(KEY, String(extra));}catch(e){} });
+    if (reset) reset.addEventListener('click', () => { extra = 0; apply(); try{localStorage.setItem(KEY, String(extra));}catch(e){} });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
   else bind();
