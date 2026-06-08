@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<title>Probador de Voces — Portal Pronóstico Q2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: linear-gradient(135deg, #1A2D6F 0%, #1E3A8A 100%);
+    margin: 0; padding: 20px;
+    min-height: 100vh;
+    color: #1f2937;
+  }
+  .container {
+    max-width: 880px; margin: 0 auto;
+    background: white; border-radius: 12px;
+    padding: 24px 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  }
+  h1 { color: #1A2D6F; font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #6b7280; font-size: 13px; margin-bottom: 16px; }
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    background: #f3f4f6; padding: 10px 12px; border-radius: 8px; margin-bottom: 14px;
+  }
+  .controls label { font-size: 12px; color: #374151; font-weight: 600; }
+  .controls input[type=text] {
+    flex: 1; min-width: 220px;
+    padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px;
+  }
+  .controls .slider-grp { display: flex; gap: 6px; align-items: center; }
+  .controls input[type=range] { width: 110px; }
+  .controls .val { font-size: 11px; color: #6b7280; min-width: 28px; }
+  .filters {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .filter-btn {
+    padding: 5px 11px; border-radius: 999px; border: 1px solid #d1d5db;
+    background: white; cursor: pointer; font-size: 12px; color: #374151;
+  }
+  .filter-btn.active { background: #1A2D6F; color: white; border-color: #1A2D6F; }
+  .voices { display: grid; gap: 8px; }
+  .voice-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 10px; align-items: center;
+    border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 10px 12px; background: #fafbfc;
+    transition: border .15s, background .15s;
+  }
+  .voice-card:hover { border-color: #1A2D6F; background: #f5f7fb; }
+  .voice-card.selected { border: 2px solid #16a34a; background: #ecfdf5; padding: 9px 11px; }
+  .voice-card.male { border-left: 4px solid #1A2D6F; }
+  .voice-card.female { border-left: 4px solid #db2777; }
+  .voice-card.unknown { border-left: 4px solid #6b7280; }
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    background: #1A2D6F; color: white; text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .badge.female { background: #db2777; }
+  .badge.unknown { background: #6b7280; }
+  .badge.natural { background: #16a34a; }
+  .vinfo { display: flex; flex-direction: column; gap: 2px; }
+  .vname { font-weight: 700; font-size: 14px; color: #111827; }
+  .vmeta { font-size: 11px; color: #6b7280; }
+  .btn {
+    border: 1px solid #1A2D6F; background: #1A2D6F; color: white;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
+  }
+  .btn:hover { background: #1E3A8A; }
+  .btn.outline { background: white; color: #1A2D6F; }
+  .btn.outline:hover { background: #eef2ff; }
+  .btn.green { background: #16a34a; border-color: #16a34a; }
+  .btn.green:hover { background: #15803d; }
+  .saved-bar {
+    background: #ecfdf5; border: 1px solid #16a34a; color: #14532d;
+    padding: 10px 14px; border-radius: 8px; margin-top: 14px; font-size: 13px;
+    display: none;
+  }
+  .saved-bar.visible { display: block; }
+  .saved-bar b { color: #14532d; }
+  .empty { text-align: center; padding: 30px; color: #6b7280; font-size: 14px; }
+  .info-box {
+    background: #fefce8; border: 1px solid #facc15; color: #713f12;
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-top: 10px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎙️ Probador de Voces — Portal Pronóstico Q2</h1>
+  <div class="sub">Escucha cada voz, marca la que más te guste y haz clic en <b>"Usar esta voz"</b>. La elección se guarda y se aplicará al tour del portal.</div>
+
+  <div class="controls">
+    <label>Frase de prueba:</label>
+    <input type="text" id="sample-text" value="Bienvenido al Portal de Pronóstico de Cartera. Aquí puedes analizar la información y simular escenarios para tus clientes.">
+    <div class="slider-grp">
+      <label>Velocidad:</label>
+      <input type="range" id="rate" min="0.7" max="1.5" step="0.05" value="1.1">
+      <span class="val" id="rate-val">1.10×</span>
+    </div>
+    <div class="slider-grp">
+      <label>Tono:</label>
+      <input type="range" id="pitch" min="0.7" max="1.3" step="0.05" value="1.0">
+      <span class="val" id="pitch-val">1.00</span>
+    </div>
+    <button class="btn outline" onclick="stop()">⏸ Detener</button>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="latino-male">🇲🇽 Hombre latino</button>
+    <button class="filter-btn" data-filter="latino-all">Latino (todas)</button>
+    <button class="filter-btn" data-filter="es-all">Todas en español</button>
+    <button class="filter-btn" data-filter="all">Todas</button>
+  </div>
+
+  <div id="voices-list" class="voices"></div>
+
+  <div class="saved-bar" id="saved-bar">
+    ✓ Voz guardada: <b id="saved-name">—</b>. El portal la usará en el tour.
+    <button class="btn outline" style="margin-left:10px;" onclick="clearVoice()">Quitar selección</button>
+  </div>
+
+  <div class="info-box">
+    <b>Tip:</b> Si no ves muchas voces, asegúrate de tener Microsoft Edge o Chrome actualizado.
+    Las voces "Online (Natural)" son las de mejor calidad. En la PWA hereda las voces del sistema.
+    Una vez elegida, abre el portal y prueba el tour ("💡 Guía rápida").
+  </div>
+</div>
+
+<script>
+const VOICE_KEY = 'tour-voice-name-v1';
+let voices = [];
+let currentFilter = 'latino-male';
+let utter = null;
+
+// Heurística para clasificar género por nombre
+const maleNames = /(Jorge|Mateo|Diego|Carlos|Andres|Andrés|Pablo|Salvador|Tomas|Tomás|Lorenzo|Sergio|Roberto|Emilio|Luis|Federico|Mario|Yago|Victor|Víctor|Joaquin|Joaquín|Marcelo|Sebastian|Sebastián|Liberto|Juan|Daniel|Javier|Alvaro|Álvaro|Alex|Gonzalo|Pedro|Miguel|Manuel|Antonio|Francisco)/i;
+const femaleNames = /(Dalia|Renata|Camila|Paloma|Sabina|Esperanza|Paulina|Monica|Mónica|Ximena|Soledad|Helena|Laura|Maria|María|Lola|Sofia|Sofía|Catalina|Lucia|Lucía|Elena|Pilar|Beatriz|Isabel|Carmen|Rosa|Marta|Andrea|Valentina|Daniela|Karina|Larissa|Elvira)/i;
+
+function classify(v) {
+  if (maleNames.test(v.name)) return 'male';
+  if (femaleNames.test(v.name)) return 'female';
+  return 'unknown';
+}
+
+function isLatin(lang) {
+  return /^es-(MX|US|419|CO|AR|CL|PE|VE|UY|EC|CR|BO|PA|DO|GT|HN|NI|PY|SV|PR)/i.test(lang);
+}
+
+function isNatural(v) {
+  return /Natural|Online/i.test(v.name);
+}
+
+function loadVoices() {
+  voices = window.speechSynthesis.getVoices().slice();
+  // Ordenar: Natural primero, luego latino, luego es-MX primero, etc.
+  voices.sort((a, b) => {
+    const aNat = isNatural(a) ? 0 : 1;
+    const bNat = isNatural(b) ? 0 : 1;
+    if (aNat !== bNat) return aNat - bNat;
+    const aMx = /es-MX/i.test(a.lang) ? 0 : 1;
+    const bMx = /es-MX/i.test(b.lang) ? 0 : 1;
+    if (aMx !== bMx) return aMx - bMx;
+    const aLat = isLatin(a.lang) ? 0 : 1;
+    const bLat = isLatin(b.lang) ? 0 : 1;
+    if (aLat !== bLat) return aLat - bLat;
+    return a.name.localeCompare(b.name);
+  });
+  render();
+}
+
+function passFilter(v) {
+  const g = classify(v);
+  switch(currentFilter) {
+    case 'latino-male': return isLatin(v.lang) && g === 'male';
+    case 'latino-all': return isLatin(v.lang);
+    case 'es-all': return /^es/i.test(v.lang);
+    case 'all': return true;
+  }
+  return true;
+}
+
+function render() {
+  const list = document.getElementById('voices-list');
+  const filtered = voices.filter(passFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty">No se encontraron voces con este filtro. Prueba "Todas en español".</div>';
+    return;
+  }
+  const saved = localStorage.getItem(VOICE_KEY);
+  list.innerHTML = filtered.map(v => {
+    const g = classify(v);
+    const nat = isNatural(v);
+    const selected = v.name === saved ? 'selected' : '';
+    return `
+      <div class="voice-card ${g} ${selected}" data-name="${v.name.replace(/"/g, '&quot;')}">
+        <span class="badge ${g === 'female' ? 'female' : g === 'unknown' ? 'unknown' : ''}">${g === 'male' ? '♂ HOMBRE' : g === 'female' ? '♀ MUJER' : '? VOZ'}</span>
+        <div class="vinfo">
+          <div class="vname">${v.name} ${nat ? '<span class="badge natural" style="font-size:9px;margin-left:6px;">NATURAL</span>' : ''}</div>
+          <div class="vmeta">${v.lang}${v.localService ? ' · local' : ' · online'}</div>
+        </div>
+        <button class="btn" onclick="play('${v.name.replace(/'/g, "\\'")}')">▶ Escuchar</button>
+        <button class="btn green" onclick="save('${v.name.replace(/'/g, "\\'")}')">✓ Usar esta voz</button>
+      </div>
+    `;
+  }).join('');
+  updateSavedBar();
+}
+
+function play(name) {
+  stop();
+  const v = voices.find(x => x.name === name);
+  if (!v) return;
+  const text = document.getElementById('sample-text').value || '';
+  const rate = parseFloat(document.getElementById('rate').value);
+  const pitch = parseFloat(document.getElementById('pitch').value);
+  utter = new SpeechSynthesisUtterance(prepText(text));
+  utter.voice = v;
+  utter.lang = v.lang;
+  utter.rate = rate;
+  utter.pitch = pitch;
+  utter.volume = 1;
+  window.speechSynthesis.speak(utter);
+}
+
+function prepText(text) {
+  return String(text || '')
+    .replace(/\s*\n+\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/;\s*/g, ', ')
+    .replace(/:\s+/g, ', ')
+    .replace(/\.\s+(?=[a-záéíóúüñA-ZÁÉÍÓÚÜÑ])/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .trim();
+}
+
+function stop() {
+  try { window.speechSynthesis.cancel(); } catch(e) {}
+  utter = null;
+}
+
+function save(name) {
+  localStorage.setItem(VOICE_KEY, name);
+  render();
+}
+
+function clearVoice() {
+  localStorage.removeItem(VOICE_KEY);
+  render();
+}
+
+function updateSavedBar() {
+  const saved = localStorage.getItem(VOICE_KEY);
+  const bar = document.getElementById('saved-bar');
+  const nameEl = document.getElementById('saved-name');
+  if (saved) {
+    bar.classList.add('visible');
+    nameEl.textContent = saved;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+// Listeners
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('rate').addEventListener('input', e => {
+  document.getElementById('rate-val').textContent = parseFloat(e.target.value).toFixed(2) + '×';
+});
+document.getElementById('pitch').addEventListener('input', e => {
+  document.getElementById('pitch-val').textContent = parseFloat(e.target.value).toFixed(2);
+});
+
+if (window.speechSynthesis) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+} else {
+  document.getElementById('voices-list').innerHTML = '<div class="empty">Tu navegador no soporta síntesis de voz.</div>';
+}
+</script>
+</body>
+</html>

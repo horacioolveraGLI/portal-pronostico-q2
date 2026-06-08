@@ -2747,9 +2747,18 @@ try {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }
 
-  // Selección de voz: HOMBRE JOVEN LATINO con timbre claro en español
+  // Selección de voz: HOMBRE JOVEN LATINO con timbre claro en español.
+  // Si el usuario eligió una voz específica desde voces.html, se respeta esa.
   function pickVoice(){
     if (!voices.length) return null;
+    // 0) Voz elegida manualmente por el usuario en el probador (voces.html)
+    try {
+      const userChoice = localStorage.getItem('tour-voice-name-v1');
+      if (userChoice) {
+        const exact = voices.find(v => v.name === userChoice);
+        if (exact) return exact;
+      }
+    } catch(e) {}
     const isLatin = (lang) => /^es-(MX|US|419|CO|AR|CL|PE|VE|UY|EC|CR|BO|PA|DO|GT|HN|NI|PY|SV|PR)/i.test(lang);
     // Voces masculinas JÓVENES (timbre claro/juvenil) en orden de preferencia.
     // Estos son los nombres específicos de las voces "Natural" de Microsoft Edge.
