@@ -2747,26 +2747,24 @@ try {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }
 
-  // Selección de la mejor voz en español - prioriza voces "Natural" y "Online" (acento latino, más naturales)
+  // Selección de la mejor voz en español - prioriza voces MASCULINAS / UNISEX latinas
   function pickVoice(){
     if (!voices.length) return null;
     const isLatin = (lang) => /^es-(MX|US|419|CO|AR|CL|PE|VE)/i.test(lang);
+    // Nombres conocidos de voces masculinas en español (Microsoft, Google, Apple)
+    const maleNames = /(Jorge|Mateo|Diego|Carlos|Andres|Andrés|Pablo|Salvador|Tomas|Tomás|Lorenzo|Sergio|Roberto|Emilio|Luis|Federico|Mario|Yago|Victor|Víctor|Joaquin|Joaquín|Marcelo|Sebastian|Sebastián|Liberto|Juan|Daniel|Javier|Alvaro|Álvaro)/i;
     const preferences = [
-      // Las voces "Natural" / "Online" de Microsoft Edge son las más fluidas y con acento latino
-      v => /Natural|Online/i.test(v.name) && isLatin(v.lang),
-      v => /(Dalia|Jorge|Mateo|Renata|Camila)/i.test(v.name) && /es/i.test(v.lang),
-      // Google US Spanish — neutral latino, muy natural
+      // 1) Voces MASCULINAS Natural/Online latinas (Edge) — la mejor calidad
+      v => /Natural|Online/i.test(v.name) && maleNames.test(v.name) && isLatin(v.lang),
+      // 2) Cualquier voz masculina con acento latino
+      v => maleNames.test(v.name) && isLatin(v.lang),
+      // 3) Voces masculinas en español (cualquier región)
+      v => maleNames.test(v.name) && /^es/i.test(v.lang),
+      // 4) Voz UNISEX/NEUTRA: Google es-US (tono neutral, no claramente femenino)
       v => /Google/i.test(v.name) && /es-US/i.test(v.lang),
-      v => /Google/i.test(v.name) && isLatin(v.lang),
-      v => /Google.*español/i.test(v.name),
-      // Voces de Apple
-      v => /Paulina|Monica|Esperanza/i.test(v.name) && /es/i.test(v.lang),
-      // Microsoft Sabina (Windows local) — algo robótica pero acento latino
-      v => /Sabina/i.test(v.name) && /es/i.test(v.lang),
-      // Cualquier voz latina sin importar el motor
+      // 5) Fallback: cualquier Natural/Online latina
+      v => /Natural|Online/i.test(v.name) && isLatin(v.lang),
       v => isLatin(v.lang),
-      // Como último recurso, cualquier es-*
-      v => /es-ES/i.test(v.lang),
       v => /^es/i.test(v.lang)
     ];
     for (const test of preferences) {
@@ -2787,7 +2785,7 @@ try {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'es-MX';
       u.rate = 1.15;    // velocidad más ágil pero clara
-      u.pitch = 1.0;    // neutro, menos forzado
+      u.pitch = 0.9;    // ligeramente más grave para tono masculino / unisex
       u.volume = 1;
       const v = pickVoice();
       if (v) u.voice = v;
