@@ -2780,26 +2780,29 @@ try {
     return null;
   }
 
-  // Pre-procesa el texto para una narración FLUIDA y SIN ACENTUACIONES marcadas.
-  // El motor TTS modula tono con signos de exclamación/interrogación, puntos, paréntesis,
-  // mayúsculas iniciales y comillas. Los eliminamos para un flujo uniforme.
+  // Pre-procesa el texto para una narración natural:
+  //  - Comas y puntos se MANTIENEN → el TTS hace pausa leve en coma (~250ms) y más larga en punto (~600ms).
+  //  - Se eliminan signos de énfasis (¡!¿?, comillas, paréntesis) que generan modulación tonal artificial.
+  //  - ; y : se convierten en coma (pausa leve, en vez de pausa larga).
   function prepText(text){
     return String(text || '')
       .replace(/\s*\n+\s*/g, ' ')          // saltos de línea → espacio
-      .replace(/\s{2,}/g, ' ')             // colapsar espacios múltiples
-      // Quitar TODOS los signos de énfasis que el TTS interpreta como modulación tonal
+      // Quitar signos de énfasis tonal (no afectan pausa, sí entonación)
       .replace(/[¡!¿?]/g, '')              // exclamación e interrogación → fuera
-      .replace(/["'«»“”‘’]/g, '')          // comillas → fuera (causan énfasis)
+      .replace(/["'«»“”‘’]/g, '')          // comillas → fuera
       .replace(/[()[\]{}]/g, ' ')          // paréntesis y corchetes → espacio
-      .replace(/[—–−]/g, ' ')              // guiones largos → espacio
+      .replace(/[—–−]/g, ', ')             // guiones largos → coma (pausa leve)
       .replace(/[·•]/g, ' ')               // bullets → espacio
-      // Suavizar pausas
-      .replace(/;\s*/g, ' ')               // ; → solo espacio (sin pausa)
-      .replace(/:\s+/g, ' ')               // : → solo espacio
-      .replace(/\.\s+/g, ' ')              // puntos internos → espacio (cero pausa)
-      .replace(/,\s*/g, ' ')               // comas → espacio (eliminar TODAS las pausas)
-      .replace(/\s{2,}/g, ' ')             // colapsar de nuevo
-      .replace(/\.$/, '')                  // quitar punto final
+      // Convertir ; y : en coma (pausa breve)
+      .replace(/\s*;\s*/g, ', ')
+      .replace(/:\s+/g, ', ')
+      // Normalizar puntuación
+      .replace(/\.{2,}/g, '.')             // puntos suspensivos → un punto
+      .replace(/,\s*,/g, ',')              // comas dobles → una
+      .replace(/,([^\s])/g, ', $1')        // espacio tras coma
+      .replace(/\s+,/g, ',')               // sin espacio antes de coma
+      .replace(/\s+\./g, '.')              // sin espacio antes de punto
+      .replace(/\s{2,}/g, ' ')             // colapsar espacios
       .trim();
   }
 
