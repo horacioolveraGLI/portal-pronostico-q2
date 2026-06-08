@@ -180,13 +180,25 @@
   thead th.filler, tbody td.filler {
     display: none !important;
   }
-  /* Columna Cliente más amplia (con espacio para nombres largos) */
+  /* Columna Cliente — absorbe el espacio sobrante para nombres largos */
   tbody td.text {
-    min-width: 220px;
+    min-width: 240px;
   }
-  /* Columnas del módulo Cartera (azul) más anchas para mejor lectura */
+  /* Columnas numéricas tienen un mínimo razonable */
+  thead th.calc-col, thead th.orange-col, thead th.yellow-col {
+    min-width: 80px;
+  }
+  /* Inputs editables — un poco más anchos para alinearse mejor */
+  td.input-cell { min-width: 95px; }
+  /* Columnas del módulo Cartera (azul) - compactas pero crecen si hay espacio */
   thead th.blue-col, tbody td.blue-cell {
-    min-width: 105px;
+    min-width: 85px;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    font-size: 12px;
+  }
+  tbody td.blue-cell {
+    white-space: nowrap;
   }
   tbody td {
     padding: 4px 5px; border-bottom: 1px solid #e5e7eb; text-align: center;
@@ -1705,7 +1717,7 @@ function render() {
     tr.innerHTML = `
       <td class="text col-status"><span class="status-badge lvl-${r.Y_blocked?'critical':'good'}" title="${r.Y_blocked?'Bloqueado':'Desbloqueado'} (col Z del Cierre Q2)">${r.Y_blocked?'🔒 BLOQ':'🟢 OK'}</span></td>
       <td class="text ctr col-plazo" title="Plazo de pago: ${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+' días' : r.AA_plazo) : '—'}">${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+'d' : (String(r.AA_plazo).length>4 ? String(r.AA_plazo).slice(0,3)+'.' : r.AA_plazo)) : '—'}</td>
-      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:260px;"><b>${nameShort}</b><br><span class="client-info">${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}</span></td>
+      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_analista}" style="max-width:320px;"><b>${nameShort}</b><br><span class="client-info">${r.C_id} - ${r.A_controller}${r.B_analista ? ' - ' + r.B_analista : ''}</span></td>
       <td class="blue-cell">${fmtMraw(r.E)}</td>
       <td class="blue-cell pronos-related">${fmtMraw(r.J)}</td>
       <td class="blue-cell pronos-related">${fmtMraw(r.P)}</td>
