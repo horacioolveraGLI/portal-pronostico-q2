@@ -1,0 +1,3399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d91">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Pronóstico</title>
+<!-- PWA: hace el portal instalable como app en móvil -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A2D6F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pronóstico">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Portal de Pronóstico de Cartera Q2 2026 - Genomma Lab Internacional">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #eef2f7; color: #1f2937; padding: 6px 8px; }
+  h1 { color: #0b3d91; font-size: 14px; margin-bottom: 0; line-height: 1.2; }
+  .subtitle { color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+
+  /* ====== HEADER ====== */
+  .header-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px; gap: 8px;
+  }
+  .header-left { flex: 1; }
+  .upload-btn-group { display: flex; gap: 3px; align-items: center; }
+  .upload-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 6px; border: 1px solid #d1d5db; border-radius: 4px;
+    background: white; cursor: pointer; font-size: 10px; color: #374151;
+    transition: all 0.15s; font-weight: 500;
+  }
+  .upload-btn:hover { border-color: #0b3d91; background: #eff6ff; color: #0b3d91; }
+  .upload-btn.loaded { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  .upload-btn .ic { font-size: 11px; }
+  .upload-btn input[type=file] { display: none; }
+
+  /* ====== ETIQUETAS DE FILA ====== */
+  .row-tag {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px; margin-bottom: 3px; display: inline-block;
+  }
+  .tag-company { background: #0b3d91; color: white; }
+  .tag-filtered { background: #b45309; color: white; margin-top: 4px; }
+
+  /* ====== KPI + INSIGHT COMBINED ROW ====== */
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+  /* Ocultar las tarjetas de status (semáforo) en el top-grid */
+  .top-grid .insight-card { display: none !important; }
+  .kpi-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #0b3d91;
+    min-width: 0; overflow: hidden;
+  }
+  .kpi-card .label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kpi-card .delta { font-size: 9px; line-height: 1.1; }
+  .kpi-card .delta.up { color: #047857; font-weight: 600; }
+  .kpi-card .delta.down { color: #b91c1c; font-weight: 600; }
+  .kpi-card.k2 { border-left-color: #0891b2; }
+  .kpi-card.k3 { border-left-color: #ca8a04; }
+  .kpi-card.k4 { border-left-color: #db2777; }
+  .kpi-card.k5 { border-left-color: #7c3aed; }
+  .kpi-card.dso-green { background: linear-gradient(135deg, #ecfdf5 0%, white 60%); border-left-color: #10b981; }
+  .kpi-card.dso-yellow { background: linear-gradient(135deg, #fefce8 0%, white 60%); border-left-color: #eab308; }
+  .kpi-card.dso-orange { background: linear-gradient(135deg, #fff7ed 0%, white 60%); border-left-color: #f97316; }
+  .kpi-card.dso-red { background: linear-gradient(135deg, #fef2f2 0%, white 60%); border-left-color: #dc2626; }
+
+  /* Insight semáforo cards (compactos, en la misma fila que KPIs) */
+  .insight-card {
+    background: white; border-radius: 5px; padding: 4px 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07); border-left: 3px solid #6b7280;
+    min-width: 0; overflow: hidden;
+  }
+  .insight-card.success { border-left-color: #10b981; background: linear-gradient(135deg, #ecfdf5 0%, white 60%); }
+  .insight-card.warning { border-left-color: #f59e0b; background: linear-gradient(135deg, #fefce8 0%, white 60%); }
+  .insight-card.danger { border-left-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, white 60%); }
+  .insight-card .ic-label { font-size: 8px; color: #6b7280; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .insight-card .ic-value { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; }
+  .insight-card .ic-sub { font-size: 9px; color: #4b5563; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ====== GRÁFICA INFERIOR (Venta mensual vs compañía) ====== */
+  .bottom-chart-wrap {
+    background: white; border-radius: 8px; padding: 10px 14px; margin-top: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .bottom-chart-wrap .bc-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .bottom-chart-wrap .bc-title {
+    font-size: 12px; font-weight: 700; color: #0b3d91; text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .bottom-chart-wrap .bc-legend { display: flex; gap: 14px; font-size: 11px; color: #374151; }
+  .bottom-chart-wrap .bc-legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .bottom-chart-wrap .bc-canvas { width: 100%; height: 200px; position: relative; }
+
+  /* ====== INSIGHTS BANNER - ahora compacto a una sola línea ====== */
+  .insights-banner {
+    background: linear-gradient(90deg, #0b3d91 0%, #1e40af 100%);
+    color: white; border-radius: 6px; padding: 6px 12px; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(11,61,145,0.15);
+    font-size: 11px;
+  }
+  .insights-banner .ib-icon { font-size: 20px; }
+  .insights-banner .ib-title { font-size: 9px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; }
+  .insights-banner .ib-headline { font-size: 12px; font-weight: 600; line-height: 1.2; }
+  .insights-banner .ib-stats { display: flex; gap: 14px; margin-left: auto; }
+  .insights-banner .ib-stat .ib-lbl { font-size: 8.5px; opacity: 0.8; text-transform: uppercase; }
+  .insights-banner .ib-stat .ib-val { font-size: 13px; font-weight: 700; }
+
+  /* ====== CONTROLS ====== */
+  .controls {
+    background: white; border-radius: 7px; padding: 8px 12px; margin-bottom: 7px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+    display: flex; gap: 9px; flex-wrap: nowrap; align-items: center;
+    overflow-x: auto;
+  }
+  .controls label { font-size: 14px; color: #374151; font-weight: 600; white-space: nowrap; }
+  .controls input[type=text], .controls select {
+    padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 14px;
+  }
+  .controls input[type=text] { min-width: 190px; }
+  .controls .btn {
+    background: #0b3d91; color: white; padding: 7px 14px; border: none;
+    border-radius: 5px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+  }
+  .controls .btn:hover { background: #093680; }
+  .controls .btn.secondary { background: #6b7280; }
+  .controls .btn.secondary:hover { background: #4b5563; }
+  .controls .target-control {
+    display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+    background: #fef3c7; border: 1px solid #fbbf24; border-radius: 5px;
+  }
+  .controls .target-control input { width: 56px; padding: 3px 6px; border: 1px solid #d97706; border-radius: 4px; font-size: 13.5px; text-align: center; }
+  .controls .legend-inline { display: inline-flex; gap: 10px; font-size: 12px; color: #4b5563; align-items: center; margin-left: 8px; }
+  .controls .legend-inline .sw { display: inline-block; width: 13px; height: 13px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+
+  /* ====== TABLE ====== */
+  .table-wrapper {
+    background: white; border-radius: 6px; padding: 0; margin-bottom: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: auto; max-height: calc(73vh);
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; table-layout: auto; }
+  thead th {
+    background: #1e3a8a;  /* AZUL MARINO (default: Status, Cliente) */
+    color: white; padding: 5px 4px; text-align: center;
+    font-size: 10.5px; white-space: normal;
+    border-right: 1px solid rgba(255,255,255,0.1); line-height: 1.15;
+    font-weight: 700; width: 1%;
+  }
+  /* Sticky a nivel de THEAD entero: ambas filas se mueven juntas como un bloque.
+     Esto elimina cualquier gap o desfase entre la group-row y la col-row al hacer scroll. */
+  #data-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  thead th.text { text-align: left; width: 1%; }
+  thead th.ctr { text-align: center; }
+  thead th.calc-col   { background: #22c55e; }            /* VERDE BANDERA CLARO */
+  thead th.orange-col { background: #ea580c; }            /* NARANJA */
+  thead th.yellow-col { background: #facc15; color: #422006; } /* AMARILLO con texto oscuro */
+  thead th.sugg-col   { background: #7c3aed; }
+  /* Columna filler ahora oculta: la tabla aprovecha todo el ancho disponible */
+  thead th.filler, tbody td.filler {
+    display: none !important;
+  }
+  /* Columna Cliente — sin min-width para que pueda reducirse al gusto con los handles (el nombre se trunca con ...) */
+  tbody td.text {
+    min-width: 0;
+  }
+  /* Columnas numéricas tienen un mínimo razonable */
+  thead th.calc-col, thead th.orange-col, thead th.yellow-col {
+    min-width: 80px;
+  }
+  /* Inputs editables — un poco más anchos para alinearse mejor */
+  td.input-cell { min-width: 95px; }
+  /* Columnas del módulo Cartera (azul) - compactas pero crecen si hay espacio */
+  thead th.blue-col, tbody td.blue-cell {
+    min-width: 85px;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+    font-size: 12px;
+  }
+  tbody td.blue-cell {
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 4px 5px; border-bottom: 1px solid #e5e7eb; text-align: center;
+    white-space: nowrap; vertical-align: middle; font-size: 13px; font-weight: 500;
+  }
+  tbody td.text { text-align: left; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  tbody tr:hover td { background: #f9fafb; }
+  tbody tr.selected td { background: #fef3c7 !important; }
+  tbody td.input-cell { background: #fffbeb; padding: 2px 4px; }
+  tbody td.calc-cell { background: #f0fdf4; font-weight: 700; }
+  tbody td.calc-cell.changed { background: #fde68a; color: #92400e; }
+
+  /* DSO traffic light cell */
+  td.dso-cell { font-weight: 700; text-align: center; font-size: 13px; }
+  td.dso-cell.lvl-excellent { background: #dcfce7; color: #14532d; }
+  td.dso-cell.lvl-good { background: #d1fae5; color: #065f46; }
+  td.dso-cell.lvl-warning { background: #fef9c3; color: #854d0e; }
+  td.dso-cell.lvl-risk { background: #ffedd5; color: #9a3412; }
+  td.dso-cell.lvl-critical { background: #fee2e2; color: #991b1b; }
+
+  /* Status badge — apretado al máximo */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 2px; padding: 1px 4px;
+    border-radius: 8px; font-size: 8.5px; font-weight: 700; letter-spacing: 0;
+    white-space: nowrap;
+  }
+  /* Columnas Status y Plazo: anchos mínimos para liberar espacio a las demás */
+  thead th.col-status, tbody td.col-status {
+    width: 70px; min-width: 70px; max-width: 70px;
+    padding-left: 2px !important; padding-right: 2px !important;
+  }
+  thead th.col-plazo, tbody td.col-plazo {
+    width: 48px; min-width: 48px; max-width: 48px;
+    padding-left: 2px !important; padding-right: 2px !important;
+    font-size: 11px;
+  }
+  .status-badge.lvl-excellent { background: #10b981; color: white; }
+  .status-badge.lvl-good { background: #34d399; color: #064e3b; }
+  .status-badge.lvl-warning { background: #facc15; color: #713f12; }
+  .status-badge.lvl-risk { background: #fb923c; color: #7c2d12; }
+  .status-badge.lvl-critical { background: #ef4444; color: white; }
+  .status-badge.lvl-na { background: #cbd5e1; color: #475569; }
+
+  /* DSO progress bar in row */
+  .dso-bar {
+    display: inline-block; width: 38px; height: 6px; background: #e5e7eb;
+    border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 3px;
+    position: relative;
+  }
+  .dso-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .dso-bar-fill.lvl-excellent { background: #10b981; }
+  .dso-bar-fill.lvl-good { background: #34d399; }
+  .dso-bar-fill.lvl-warning { background: #facc15; }
+  .dso-bar-fill.lvl-risk { background: #fb923c; }
+  .dso-bar-fill.lvl-critical { background: #ef4444; }
+  .dso-bar-target {
+    position: absolute; top:-1px; bottom:-1px; width: 2px; background: #1e40af;
+    box-shadow: 0 0 0 1px white;
+  }
+
+  /* Suggestion cell */
+  td.sugg-cell {
+    background: linear-gradient(90deg, #faf5ff 0%, white 100%);
+    text-align: left; font-size: 9.5px; line-height: 1.2; min-width: 200px;
+    padding: 2px 4px;
+  }
+  td.sugg-cell .sugg-line {
+    display: flex; align-items: center; gap: 3px; margin-bottom: 1px;
+  }
+  td.sugg-cell .sugg-line:last-child { margin-bottom: 0; }
+  td.sugg-cell .sugg-amount {
+    font-weight: 700; padding: 0px 4px; border-radius: 2px;
+    background: rgba(124,58,237,0.1); color: #6d28d9;
+  }
+  td.sugg-cell .sugg-amount.pos { background: rgba(16,185,129,0.13); color: #047857; }
+  td.sugg-cell .sugg-amount.neg { background: rgba(220,38,38,0.13); color: #b91c1c; }
+
+  input.edit {
+    width: 64px; border: 1px solid #94a3b8; border-radius: 4px; padding: 3px 4px;
+    text-align: center; font-size: 13px; font-weight: 700; background: white;
+    color: #1e3a8a;
+  }
+  input.edit:focus { outline: 1.5px solid #0b3d91; border-color: #0b3d91; }
+  input.edit.changed { background: #fef08a; }
+  input.edit.dso-target { width: 42px; }
+  .m-suffix {
+    display: inline-block; font-size: 9px; color: #b45309; font-weight: 700;
+    margin-left: 2px; vertical-align: middle;
+  }
+
+  /* ====== DETAIL SECTION ====== */
+  .detail-section {
+    background: white; border-radius: 8px; padding: 8px 10px; margin-top: -2px; margin-bottom: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: none;
+    border-top: 3px solid #b45309; /* color ámbar para hilarlo con la fila "Selección Filtrada" */
+  }
+  .detail-section.active { display: block; }
+  /* Barra superior del detalle del cliente (nombre + botón cerrar): oculta a petición del usuario */
+  .detail-header { display: none !important; }
+  .detail-header h3 { color: #0b3d91; font-size: 13px; }
+  .detail-info { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .detail-info .field { padding: 4px 7px; background: #f9fafb; border-radius: 4px; border-left: 3px solid #cbd5e1; min-width: 0; }
+  .detail-info .field.highlight { border-left-color: #0b3d91; background: #eff6ff; }
+  .detail-info .field .lbl { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail-info .field .val { font-size: 12px; font-weight: 700; color: #111827; margin-top: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+  .empty-state .icon { font-size: 48px; }
+
+  /* Legend below banner */
+  .legend-row {
+    display: flex; gap: 16px; font-size: 11px; color: #4b5563;
+    align-items: center; flex-wrap: wrap;
+  }
+  .legend-row .lg {
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .legend-row .sw {
+    display: inline-block; width: 14px; height: 14px; border-radius: 3px;
+  }
+
+  /* ============================================================== */
+  /* ====== RESPONSIVE / ADAPTACIÓN MÓVIL Y TABLET            ====== */
+  /* ============================================================== */
+
+  /* Tablet horizontal y pantallas medianas (≤ 1200px) */
+  @media (max-width: 1200px) {
+    .top-grid { grid-template-columns: repeat(4, 1fr); }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* Tablet (≤ 1024px) */
+  @media (max-width: 1024px) {
+    body { padding: 6px; }
+    .top-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .detail-info { grid-template-columns: repeat(4, 1fr); }
+    .insights-banner { flex-wrap: wrap; }
+    .insights-banner .ib-stats { margin-left: 0; width: 100%; justify-content: flex-start; }
+  }
+
+  /* Tablet vertical y móviles grandes (≤ 768px) */
+  @media (max-width: 768px) {
+    body { padding: 8px; font-size: 14px; }
+
+    /* Header: apilar verticalmente, botones centrados y tocables */
+    .header-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .header-left { text-align: center; }
+    h1 { font-size: 17px; line-height: 1.25; }
+    .subtitle { font-size: 11px; margin-bottom: 6px; }
+    .upload-btn-group {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .upload-btn {
+      flex: 1 1 30%;
+      justify-content: center;
+      padding: 10px 8px;
+      font-size: 12px;
+      min-height: 40px;
+    }
+    .upload-btn .ic { font-size: 14px; }
+
+    /* KPIs: 2 columnas en móvil grande (4 tarjetas se ven 2x2) */
+    .top-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .kpi-card, .insight-card {
+      padding: 6px 8px;
+    }
+    .kpi-card .label, .insight-card .ic-label { font-size: 9px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .kpi-card .delta, .insight-card .ic-sub { font-size: 9px; }
+
+    /* Banner de estrategia */
+    .insights-banner {
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .insights-banner .ib-icon { font-size: 22px; }
+    .insights-banner .ib-headline { font-size: 12px; }
+    .insights-banner .ib-stats {
+      margin-left: 0;
+      width: 100%;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Controles: permitir saltar de línea para que se acomoden bien */
+    .controls {
+      flex-wrap: wrap;
+      gap: 6px;
+      overflow-x: visible;
+      padding: 8px;
+    }
+    .controls input[type=text],
+    .controls select {
+      flex: 1 1 calc(50% - 6px);
+      min-width: 0;
+      font-size: 13px;
+      padding: 7px 8px;
+      min-height: 38px;
+    }
+    .controls input[type=text] { flex: 1 1 100%; }
+    .controls .btn {
+      padding: 9px 14px;
+      font-size: 13px;
+      min-height: 38px;
+      flex: 1 1 auto;
+    }
+    .controls .target-control {
+      flex: 1 1 calc(50% - 6px);
+      justify-content: space-between;
+      padding: 4px 8px;
+    }
+    .controls .target-control input {
+      width: 60px;
+      padding: 4px 6px;
+      font-size: 13px;
+      min-height: 30px;
+    }
+    .controls .legend-inline {
+      width: 100%;
+      margin-left: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    /* Tabla: scroll horizontal con momentum táctil */
+    .table-wrapper {
+      max-height: 70vh;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 6px;
+    }
+    table { font-size: 12px; }
+    thead th { font-size: 10px; padding: 6px 4px; }
+    tbody td { font-size: 12px; padding: 6px 5px; }
+    input.edit {
+      width: 60px;
+      min-height: 30px;
+      font-size: 13px;
+      padding: 4px 6px;
+    }
+
+    /* Detalle del cliente */
+    .detail-info { grid-template-columns: repeat(2, 1fr); }
+    .detail-info .field .val { font-size: 12px; }
+    .detail-header h3 { font-size: 13px; }
+  }
+
+  /* Móvil estándar (≤ 480px) */
+  @media (max-width: 480px) {
+    body { padding: 5px; }
+
+    h1 { font-size: 15px; }
+    .subtitle { font-size: 10px; }
+
+    /* KPIs: 2 columnas */
+    .top-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+    .kpi-card .value, .insight-card .ic-value { font-size: 14px; }
+
+    /* Cada botón de carga en una línea propia */
+    .upload-btn {
+      flex: 1 1 100%;
+    }
+
+    /* Banner más compacto y apilado */
+    .insights-banner { padding: 8px 10px; }
+    .insights-banner .ib-icon { font-size: 20px; }
+    .insights-banner .ib-headline { font-size: 11px; line-height: 1.3; }
+    .insights-banner .ib-stat .ib-val { font-size: 12px; }
+
+    /* Controles: filtros en 1 columna para legibilidad */
+    .controls select {
+      flex: 1 1 100%;
+    }
+    .controls .target-control {
+      flex: 1 1 100%;
+    }
+    .controls .btn {
+      flex: 1 1 calc(50% - 3px);
+    }
+
+    /* Tabla: altura reducida para que se vea bien con el teclado abierto */
+    .table-wrapper { max-height: 60vh; }
+    table { font-size: 11px; }
+    thead th { font-size: 9.5px; padding: 5px 3px; }
+    tbody td { font-size: 11px; padding: 5px 4px; }
+
+    /* Detalle: una sola columna */
+    .detail-info { grid-template-columns: 1fr; }
+
+    /* Chart si está presente */
+    .bottom-chart-wrap .bc-canvas { height: 240px; }
+    .bottom-chart-wrap .bc-legend { font-size: 10px; gap: 8px; flex-wrap: wrap; }
+  }
+
+  /* Móvil muy pequeño (≤ 360px) */
+  @media (max-width: 360px) {
+    h1 { font-size: 14px; }
+    .top-grid { gap: 4px; }
+    .kpi-card, .insight-card { padding: 5px 6px; }
+    .kpi-card .value, .insight-card .ic-value { font-size: 13px; }
+    .controls .btn { flex: 1 1 100%; }
+  }
+
+  /* Mejoras táctiles generales para dispositivos touch */
+  @media (hover: none) and (pointer: coarse) {
+    .upload-btn, .controls .btn {
+      min-height: 40px;
+    }
+    /* Aumentar área tocable de las filas de la tabla */
+    tbody tr { cursor: pointer; }
+    /* Quitar el hover en touch para evitar estados "pegados" */
+    .upload-btn:hover { border-color: #d1d5db; background: white; color: #374151; }
+    .upload-btn.loaded:hover { border-color: #10b981; background: #ecfdf5; color: #047857; }
+  }
+
+  /* === MOBILE UX V2 + ZOOM V3 + EXPORT V4 + FORMAT V5 + SORT V6 + FACTOR V7 + CARTERA V8 + RENAME V9 + DETALLE V10 + KPI-CART V12 === */
+  /* ====== BOTONES +/- PARA INPUTS EDITABLES (mejor UX en móvil) ====== */
+  .step-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    vertical-align: middle;
+  }
+  .num-step {
+    display: inline-flex !important; /* SIEMPRE visibles en todos los tamaños */
+    width: 16px; height: 18px;
+    border: 1px solid #e5e7eb;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #9ca3af;
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 0;
+    user-select: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+    opacity: 0.55;
+    transition: all 0.1s ease;
+  }
+  .num-step:hover { background: #f3f4f6; color: #0b3d91; border-color: #0b3d91; opacity: 1; }
+  .num-step:active { background: #e5e7eb; transform: scale(0.92); }
+
+  /* En móvil/tablet: botones +/- mucho más grandes para tap fácil (>= 44px WCAG) */
+  @media (max-width: 900px) {
+    .num-step {
+      display: inline-flex !important;
+      min-width: 38px; min-height: 40px;
+      font-size: 22px;
+      border-width: 1.5px;
+    }
+    input.edit:not(.dso-target) {
+      font-size: 16px !important; /* 16px evita el auto-zoom de iOS */
+      min-height: 40px;
+      padding: 4px 6px !important;
+      width: 72px !important;
+      text-align: center;
+    }
+    .input-cell { padding: 4px 2px !important; }
+    .step-wrap { gap: 3px !important; }
+  }
+  /* En pantallas muy pequeñas: hacer todo más compacto sin perder tamaño táctil */
+  @media (max-width: 480px) {
+    .num-step { min-width: 36px; min-height: 38px; font-size: 20px; }
+    input.edit:not(.dso-target) { width: 60px !important; }
+  }
+
+  /* ====== ORDENAMIENTO DE COLUMNAS (clic en encabezados) ====== */
+  thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.15s;
+  }
+  thead th.sortable:hover { filter: brightness(0.88); }
+  thead th.sortable::after {
+    content: ' ⇅';
+    font-size: 10px;
+    opacity: 0.45;
+    margin-left: 3px;
+  }
+  thead th.sortable.sorted-asc::after  { content: ' ▲'; opacity: 1; color: #fde68a; }
+  thead th.sortable.sorted-desc::after { content: ' ▼'; opacity: 1; color: #fde68a; }
+  /* En columnas amarillas, usar color oscuro para el indicador activo */
+  thead th.yellow-col.sortable.sorted-asc::after,
+  thead th.yellow-col.sortable.sorted-desc::after { color: #7c2d12; }
+
+  /* ====== ENCABEZADOS DE BLOQUE (group headers) ====== */
+  thead th.group-header {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 7px 4px;
+    text-align: center;
+    border-bottom: 2px solid rgba(255,255,255,0.35);
+  }
+  /* (Ya no se necesita offset sticky por fila: el thead entero es sticky como bloque) */
+
+  /* ====== LAYOUT 2 COLUMNAS: TOTAL & FILTRADA LADO A LADO ====== */
+  #main-content {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+    row-gap: 3px;
+  }
+  #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+  #main-content > .row-tag.tag-filtered { grid-column: 2; grid-row: 1; margin-top: 0; }
+  /* Usar adjacent sibling para asegurar que el top-grid correcto va a cada columna */
+  #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
+  #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 2; grid-row: 2; }
+  /* Resto de elementos ocupa el ancho completo */
+  #main-content > .detail-section,
+  #main-content > .insights-banner,
+  #main-content > .controls,
+  #main-content > .table-wrapper {
+    grid-column: 1 / -1;
+  }
+  /* Ocultar la barra roja "Estrategia Cierre Q2" */
+  #main-content > .insights-banner { display: none !important; }
+
+  /* Tarjetas más compactas para el nuevo layout 2-col */
+  #main-content .top-grid { gap: 3px; }
+  /* Variable de zoom para KPIs (controlada por los botones A+/A-) */
+  :root { --kpi-zoom: 1.15; }
+  #main-content .kpi-card { padding: calc(4px * var(--kpi-zoom)) calc(6px * var(--kpi-zoom)); }
+  /* Etiquetas KPI: 20% MÁS GRANDES que el nombre del cliente (13px * 1.2 = 15.6px) */
+  #main-content .kpi-card .label { font-size: calc(13px * 1.2 * var(--kpi-zoom)); letter-spacing: 0.2px; }
+  /* Cliente: ancho default ~40 caracteres (hint, NO fijo — el handle de resize manual gana sobre esta regla).
+     Dos renglones (nombre arriba, info abajo). Altura de fila lo más compacta posible. */
+  #data-table thead th[data-sort="cliente"] { width: 40ch; }
+  tbody td.text {
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.0;
+    min-width: 0;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+  tbody td.text b, tbody td.text .client-info {
+    display: block;
+    white-space: normal;
+    line-height: 1.05;
+  }
+  tbody td.text br { display: none; }  /* el <br> es redundante con display:block; lo ocultamos para no agregar espacio extra */
+  /* === ZOOM DE DATOS (control independiente del zoom de KPI) ===
+     Aplica solo a celdas numéricas/inputs, no al texto del cliente. */
+  :root { --data-zoom: 1; }
+  tbody td:not(.text) { font-size: calc(13px * var(--data-zoom)); }
+  tbody td.blue-cell { font-size: calc(12px * var(--data-zoom)); }
+  input.edit { font-size: calc(13px * var(--data-zoom)); }
+  .m-suffix { font-size: calc(9px * var(--data-zoom)); }
+  #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom) * var(--data-zoom)); line-height: 1.1; }
+  #main-content .kpi-card .value { font-size: calc(15px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .kpi-card .delta { font-size: calc(10px * var(--kpi-zoom)); line-height: 1.1; }
+  #main-content .row-tag { font-size: calc(11px * var(--kpi-zoom)); padding: calc(3px * var(--kpi-zoom)) calc(10px * var(--kpi-zoom)); }
+  /* Nombre del cliente: tamaño aumentado y vinculado al zoom A-/A+ */
+  tbody td.text b { font-size: calc(13px * var(--kpi-zoom)); line-height: 1.2; }
+  tbody td.text .client-info { font-size: calc(10px * var(--kpi-zoom)); color: #9ca3af; line-height: 1.3; }
+  /* Botones de zoom */
+  .zoom-control {
+    display: inline-flex; gap: 1px; align-items: stretch;
+    border: 1px solid #d1d5db; border-radius: 4px; overflow: hidden;
+    background: white; margin-left: 4px;
+  }
+  .zoom-control button {
+    padding: 3px 8px; background: white; border: none;
+    font-weight: 700; cursor: pointer; color: #374151;
+    line-height: 1;
+  }
+  .zoom-control button:hover { background: #eff6ff; color: #0b3d91; }
+  .zoom-control button:active { background: #dbeafe; }
+  .zoom-control #zoom-in { font-size: 14px; }
+  .zoom-control #zoom-out { font-size: 11px; }
+  .zoom-control #zoom-reset { font-size: 9px; padding: 3px 6px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; }
+
+  /* En tablet vertical y móvil: apilar las dos secciones nuevamente */
+  @media (max-width: 900px) {
+    #main-content {
+      grid-template-columns: 1fr !important;
+    }
+    #main-content > .row-tag.tag-company { grid-column: 1; grid-row: 1; }
+    #main-content > .row-tag.tag-company + .top-grid { grid-column: 1; grid-row: 2; }
+    #main-content > .row-tag.tag-filtered { grid-column: 1; grid-row: 3; margin-top: 4px; }
+    #main-content > .row-tag.tag-filtered + .top-grid { grid-column: 1; grid-row: 4; }
+    #main-content .kpi-card .label { font-size: calc(11px * var(--kpi-zoom)); }
+    #main-content .kpi-card .value { font-size: calc(16px * var(--kpi-zoom)); }
+  }
+
+
+/* Módulo Cartera - color azul */
+.blue-col { background: #3B82F6 !important; color: #FFFFFF !important; }
+.blue-col.group-header { background: #1E40AF !important; }
+th.blue-col.sortable { background: #93C5FD !important; color: #1E3A8A !important; }
+.blue-cell { background: #EFF6FF; color: #1E3A8A; font-weight: 600; text-align: right; padding-right: 8px; }
+tr.selected .blue-cell { background: #DBEAFE; }
+
+/* Resaltado de celdas del cálculo Pronóstico Cart Q2 (hover en la celda dispara los hermanos) */
+td.pronos-trigger { position: relative; transition: background 0.18s ease, box-shadow 0.18s ease; }
+td.pronos-trigger:hover {
+  background: #FEF3C7 !important;
+  box-shadow: inset 0 0 0 2px #F59E0B;
+  cursor: help;
+}
+td.pronos-highlight {
+  background: #FEF3C7 !important;
+  box-shadow: inset 0 0 0 2px #F59E0B;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+td.pronos-highlight .step-wrap input.edit {
+  background: transparent;
+}
+
+/* Resaltado de celdas del cálculo Pronóstico DSO (V e I) al hover en la celda DSO */
+td.dso-trigger { transition: box-shadow 0.18s ease; }
+td.dso-trigger:hover {
+  box-shadow: inset 0 0 0 2px #F59E0B;
+  cursor: help;
+}
+td.dso-highlight {
+  background: #FEF3C7 !important;
+  box-shadow: inset 0 0 0 2px #F59E0B;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* (Sección de resize manual removida — restablecido al diseño original) */
+
+/* Tooltip global flotante — diseño claro y unificado */
+.has-tip { cursor: help; }
+#global-tip {
+  position: fixed;
+  display: none;
+  background: #ffffff;
+  color: #111827;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0.1px;
+  max-width: 460px;
+  min-width: 220px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10);
+  z-index: 99999;
+  pointer-events: none;
+  white-space: normal;
+  word-wrap: break-word;
+}
+#global-tip::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: 18px;
+  width: 12px; height: 12px;
+  background: #ffffff;
+  border-top: 1.5px solid #cbd5e1;
+  border-left: 1.5px solid #cbd5e1;
+  transform: rotate(45deg);
+}
+/* Colores de los signos dentro del tooltip */
+#global-tip .op-equal {
+  color: #1d4ed8;   /* azul rey */
+  font-weight: 800;
+  font-size: 14px;
+  padding: 0 2px;
+}
+#global-tip .op-sign {
+  color: #dc2626;   /* rojo */
+  font-weight: 800;
+  font-size: 14px;
+  padding: 0 2px;
+}
+#global-tip strong { color: #0f172a; font-weight: 700; }
+
+/* ============ TOUR INTERACTIVO / GUÍA RÁPIDA ============ */
+#tour-fab {
+  position: fixed;
+  top: 14px; right: 18px;
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 30px;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(217,119,6,0.45), 0 0 0 3px rgba(245,158,11,0.18);
+  display: flex; align-items: center; gap: 6px;
+  z-index: 9990;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#tour-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(217,119,6,0.55), 0 0 0 5px rgba(245,158,11,0.25); }
+#tour-fab .ic { font-size: 14px; line-height: 1; }
+#tour-overlay {
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 99990;
+  display: none;
+  pointer-events: auto;
+}
+#tour-overlay.active { display: block; }
+#tour-mask {
+  position: fixed; top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: transparent;  /* El oscurecimiento lo da el outline del highlight */
+  pointer-events: auto;     /* Sigue captando el click para cerrar */
+  z-index: 99990;
+}
+#tour-highlight {
+  position: fixed;
+  border-radius: 10px;
+  background: transparent;
+  z-index: 99991;
+  pointer-events: none;
+  transition: top 0.4s cubic-bezier(.4,0,.2,1), left 0.4s cubic-bezier(.4,0,.2,1), width 0.4s cubic-bezier(.4,0,.2,1), height 0.4s cubic-bezier(.4,0,.2,1);
+  /* Outline oscuro alrededor crea el efecto de "agujero" sin tapar el elemento */
+  outline: 9999px solid rgba(15, 23, 42, 0.45);
+  outline-offset: 0;
+  /* Glow dorado en doble capa para destacar nítidamente la selección */
+  box-shadow:
+    0 0 0 3px #FBBF24,
+    0 0 0 7px rgba(251, 191, 36, 0.45),
+    0 0 28px 4px rgba(251, 191, 36, 0.65),
+    0 0 60px 10px rgba(251, 191, 36, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  animation: tourPulse 2.6s ease-in-out infinite;
+}
+@keyframes tourPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px #FBBF24,
+      0 0 0 7px rgba(251, 191, 36, 0.45),
+      0 0 28px 4px rgba(251, 191, 36, 0.65),
+      0 0 60px 10px rgba(251, 191, 36, 0.30),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #FBBF24,
+      0 0 0 11px rgba(251, 191, 36, 0.55),
+      0 0 38px 6px rgba(251, 191, 36, 0.80),
+      0 0 80px 14px rgba(251, 191, 36, 0.45),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  }
+}
+#tour-box {
+  position: fixed;
+  background: linear-gradient(180deg, #1E40AF 0%, #1E3A8A 100%);
+  color: white;
+  padding: 16px 18px 14px 18px;
+  border-radius: 12px;
+  width: 360px;
+  max-width: 92vw;
+  z-index: 99992;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  transition: top 0.4s cubic-bezier(.4,0,.2,1), left 0.4s cubic-bezier(.4,0,.2,1);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+#tour-box .badge {
+  display: inline-block;
+  background: rgba(245,158,11,0.25);
+  color: #FCD34D;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+#tour-box h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+  color: #ffffff;
+}
+#tour-box p {
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+  color: rgba(255,255,255,0.9);
+}
+#tour-box .nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+#tour-box .step-counter {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+#tour-box .btn-group { display: flex; gap: 6px; }
+#tour-box button {
+  font-family: inherit;
+  border: none;
+  padding: 6px 13px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+#tour-box button.primary {
+  background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+  box-shadow: 0 2px 6px rgba(217,119,6,0.4);
+}
+#tour-box button.primary:hover { transform: translateY(-1px); box-shadow: 0 3px 9px rgba(217,119,6,0.55); }
+#tour-box button.secondary {
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+}
+#tour-box button.secondary:hover { background: rgba(255,255,255,0.20); }
+#tour-box button:disabled { opacity: 0.35; cursor: not-allowed; }
+#tour-box .ctl-btn {
+  width: 30px;
+  padding: 6px 0;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1;
+}
+#tour-box .ctl-btn.active {
+  background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+}
+#tour-progress {
+  height: 4px;
+  background: rgba(255,255,255,0.14);
+  border-radius: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+#tour-progress .bar {
+  height: 100%;
+  background: linear-gradient(90deg, #FCD34D 0%, #F59E0B 100%);
+  width: 0%;
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(245,158,11,0.5);
+  transition: width 0.15s linear;
+}
+#tour-box .close-x {
+  position: absolute;
+  top: 8px; right: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 400;
+}
+#tour-box .close-x:hover { background: rgba(255,255,255,0.1); color: white; }
+
+/* ============ RESIZE DE ANCHO DE COLUMNAS (handles) ============ */
+#data-table thead th { position: relative; }
+.col-resizer {
+  position: absolute;
+  top: 0; right: 0;
+  width: 5px; height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 12;
+  background: transparent;
+  transition: background .12s;
+}
+.col-resizer:hover { background: rgba(255,255,255,0.45); }
+.col-resizer.active { background: rgba(255,255,255,0.7); }
+#reset-widths-btn {
+  background: #e0e7ff; color: #1e3a8a; border: 1px solid #c7d2fe;
+  padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; margin-left: 6px;
+}
+#reset-widths-btn:hover { background: #c7d2fe; }
+
+/* ============ DISTRIBUCIÓN ARMONIOSA (% del ancho de pantalla) ============
+   Suma 100% — todas las columnas visibles en pantalla completa.
+   Los anchos inline del resize manual ganan sobre estos % por mayor especificidad. */
+#data-table { width: 100%; }
+#data-table thead th[data-sort="status"]   { width: 5%; }
+#data-table thead th[data-sort="plazo"]    { width: 4%; }
+#data-table thead th[data-sort="cliente"]  { width: 14%; }
+#data-table thead th[data-sort="E"]        { width: 9ch; }
+#data-table thead th[data-sort="J"]        { width: 9ch; }
+#data-table thead th[data-sort="P"]        { width: 7%; }
+#data-table thead th[data-sort="MT"]       { width: 6%; }
+#data-table thead th[data-sort="V"]        { width: 7%; }
+#data-table thead th[data-sort="I"]        { width: 6%; }
+#data-table thead th[data-sort="dso"]      { width: 5.5%; }
+#data-table thead th[data-sort="K"]        { width: 5.5%; }
+#data-table thead th[data-sort="L"]        { width: 6%; }
+#data-table thead th[data-sort="M"]        { width: 5.5%; }
+#data-table thead th[data-sort="Q"]        { width: 5.5%; }
+#data-table thead th[data-sort="R"]        { width: 5.5%; }
+#data-table thead th[data-sort="S"]        { width: 5%; }
+
+/* ============ FOOTER STICKY DE TOTALES ============ */
+#data-table tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 9;
+}
+#data-table tfoot tr td {
+  background: #1e3a8a;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: calc(13px * var(--data-zoom, 1));
+  text-align: right;
+  padding: 6px 5px;
+  border-top: 2px solid #facc15;
+  border-bottom: none;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+#data-table tfoot tr td.totals-label {
+  text-align: right;
+  background: #0b3d91;
+  color: #fef3c7;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-right: 10px;
+}
+#data-table tfoot tr td.filler { display: none !important; }
+#data-table tfoot tr td[data-tot="DSO"] {
+  background: #b45309;          /* color naranja oscuro para destacar promedio ponderado */
+  color: #fff7ed;
+}
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <div class="header-left" style="display:flex; align-items:center; gap:14px;">
+    <img src="logo-header.png" alt="Pronóstico GLI México" style="height:80px; width:auto; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.14); flex-shrink:0;">
+  </div>
+  <div class="upload-btn-group">
+    <label class="upload-btn" id="card-cierre" title="Cierre Q2 2026 (Principal)">
+      <span class="ic">📊</span><span>Cierre Q2</span>
+      <input type="file" id="file-cierre" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-cartera" title="Cartera mes anterior (opcional)">
+      <span class="ic">📁</span><span>Cartera</span>
+      <input type="file" id="file-cartera" accept=".xlsx,.xls">
+    </label>
+    <label class="upload-btn" id="card-zrepo" title="ZREPO (opcional)">
+      <span class="ic">🗂️</span><span>ZREPO</span>
+      <input type="file" id="file-zrepo" accept=".xlsx,.xls">
+    </label>
+  </div>
+</div>
+
+<div id="main-content" style="display:none;">
+
+  <!-- KPIs Fila 1: TOTAL COMPAÑÍA (fija) -->
+  <div class="row-tag tag-company">TOTAL COMPAÑÍA · <span id="comp-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera">$0</div>
+      <div class="delta" id="kpi-cartera-sub">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v">$0</div>
+      <div class="delta" id="kpi-v-delta">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w">0 d</div>
+      <div class="delta" id="kpi-w-delta">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count">0</div>
+      <div class="delta" id="kpi-count-sub">con datos</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok">0</div>
+      <div class="ic-sub" id="ic-ok-sub">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn">0</div>
+      <div class="ic-sub" id="ic-warn-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk">0</div>
+      <div class="ic-sub" id="ic-risk-sub">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit">0</div>
+      <div class="ic-sub" id="ic-crit-sub">$0</div>
+    </div>
+  </div>
+
+  <!-- KPIs Fila 2: SELECCIÓN FILTRADA (dinámica) -->
+  <div class="row-tag tag-filtered">SELECCIÓN FILTRADA · <span id="filt-count">0</span> clientes</div>
+  <div class="top-grid">
+    <div class="kpi-card">
+      <div class="label">Cartera Act.</div>
+      <div class="value" id="kpi-cartera-f">$0</div>
+      <div class="delta" id="kpi-cartera-sub-f">— clientes</div>
+    </div>
+    <div class="kpi-card k2">
+      <div class="label">Pronóstico Cart Tot Cierre Q2</div>
+      <div class="value" id="kpi-v-f">$0</div>
+      <div class="delta" id="kpi-v-delta-f">$0</div>
+    </div>
+    <div class="kpi-card" id="kpi-card-w-f">
+      <div class="label">DSO Global W</div>
+      <div class="value" id="kpi-w-f">0 d</div>
+      <div class="delta" id="kpi-w-delta-f">0 d</div>
+    </div>
+    <div class="kpi-card k5">
+      <div class="label">Clientes</div>
+      <div class="value" id="kpi-count-f">0</div>
+      <div class="delta" id="kpi-count-sub-f">filtrados</div>
+    </div>
+    <div class="insight-card success">
+      <div class="ic-label">✓ En meta ≤90d</div>
+      <div class="ic-value" id="ic-ok-f">0</div>
+      <div class="ic-sub" id="ic-ok-sub-f">$0</div>
+    </div>
+    <div class="insight-card warning">
+      <div class="ic-label">⚠ Atención 90-110</div>
+      <div class="ic-value" id="ic-warn-f">0</div>
+      <div class="ic-sub" id="ic-warn-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">▲ Riesgo 110-150</div>
+      <div class="ic-value" id="ic-risk-f">0</div>
+      <div class="ic-sub" id="ic-risk-sub-f">$0</div>
+    </div>
+    <div class="insight-card danger">
+      <div class="ic-label">🔥 Crítico &gt;150d</div>
+      <div class="ic-value" id="ic-crit-f">0</div>
+      <div class="ic-sub" id="ic-crit-sub-f">$0</div>
+    </div>
+  </div>
+
+  <!-- Detail panel for selected client - unido visualmente con la fila filtrada arriba -->
+  <div class="detail-section" id="detail-section">
+    <div class="detail-header">
+      <h3 id="detail-title">Detalle Cliente</h3>
+      <button class="btn secondary" onclick="document.getElementById('detail-section').classList.remove('active'); state.selected=null; render();">✕ Cerrar</button>
+    </div>
+    <div class="detail-info" id="detail-info"></div>
+  </div>
+
+  <!-- Insights Banner (línea única compacta) -->
+  <div class="insights-banner" id="ib">
+    <div class="ib-icon" id="ib-icon">🎯</div>
+    <div>
+      <div class="ib-title">Estrategia Cierre Q2</div>
+      <div class="ib-headline" id="ib-headline">Meta: cerrar cartera ≤ 90d maximizando venta</div>
+    </div>
+    <div class="ib-stats">
+      <div class="ib-stat">
+        <div class="ib-lbl">Cobranza extra requerida</div>
+        <div class="ib-val" id="ib-cobranza">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls (single row) -->
+  <div class="controls">
+    <input type="text" id="search" placeholder="🔍 Buscar cliente o #...">
+    <select id="filter-controller"><option value="">Director: Todos</option></select>
+    <select id="filter-analista"><option value="">Canal: Todos</option></select>
+    <select id="filter-categoria"><option value="">Categoría: Todos</option></select>
+    <select id="filter-status">
+      <option value="">Status: Todos</option>
+      <option value="excellent">🟢 Excelente (≤60d)</option>
+      <option value="good">🟢 OK (≤90d)</option>
+      <option value="warning">🟡 Atención (90-110)</option>
+      <option value="risk">🟠 Riesgo (110-150)</option>
+      <option value="critical">🔴 Crítico (&gt;150)</option>
+      <option value="na">— Sin venta</option>
+    </select>
+    <select id="filter-block">
+      <option value="">Bloqueo: Todos</option>
+      <option value="blocked">🔒 Bloqueados</option>
+      <option value="unblocked">🟢 Desbloqueados</option>
+    </select>
+    <div class="target-control">
+      <label style="color:#92400e;">DSO meta:</label>
+      <input type="number" id="target-dso" value="90" min="1" max="365" step="1">
+    </div>
+    <button class="btn" id="btn-reset">↺ Restablecer</button>
+    <button class="btn secondary" id="btn-export">⬇ Excel</button>
+    <div class="zoom-control" title="Ajustar tamaño de las tarjetas KPI">
+      <button type="button" id="zoom-out" title="Reducir">A−</button>
+      <button type="button" id="zoom-reset" title="Restablecer tamaño">100%</button>
+      <button type="button" id="zoom-in" title="Aumentar">A+</button>
+    </div>
+    <div class="zoom-control" title="Ajustar tamaño de los datos numéricos de la tabla">
+      <button type="button" id="data-zoom-out" title="Reducir datos">D−</button>
+      <button type="button" id="data-zoom-reset" title="Restablecer tamaño de datos">100%</button>
+      <button type="button" id="data-zoom-in" title="Aumentar datos">D+</button>
+    </div>
+    <button type="button" id="reset-widths-btn" title="Restablecer anchos originales de columnas">↔ Reset anchos</button>
+  </div>
+
+  <!-- Editable Forecast Dashboard table -->
+  <div class="table-wrapper">
+    <table id="data-table">
+      <thead>
+        <tr class="group-row">
+          <th class="text sortable col-status" rowspan="2" data-sort="status" title="Clic para ordenar">Status</th>
+          <th class="text sortable ctr col-plazo" rowspan="2" data-sort="plazo" title="Plazo de pago (días) · clic para ordenar">Plazo</th>
+          <th class="text sortable" rowspan="2" data-sort="cliente" title="Clic para ordenar">Cliente</th>
+          <th class="blue-col ctr group-header" colspan="4">Cartera</th>
+          <th class="calc-col ctr group-header" colspan="3">Pronóstico</th>
+          <th class="orange-col ctr group-header" colspan="3">Nodo de Ventas</th>
+          <th class="yellow-col ctr group-header" colspan="3">Nodo de Cobranza</th>
+          <th class="filler" rowspan="2"></th>
+        </tr>
+        <tr class="col-row">
+          <th class="blue-col ctr sortable" data-sort="E" title="Cartera Actual (col E del archivo) · clic para ordenar">Cartera Actual</th>
+          <th class="blue-col ctr sortable" data-sort="J" title="Cartera al cierre del mes anterior (col I del archivo) · clic para ordenar">Cart Mes Anterior</th>
+          <th class="blue-col ctr sortable" data-sort="P" title="ZREPO Mes Corriente con IVA · clic para ordenar">Facturación Bruta Mes Corriente C/IVA</th>
+          <th class="blue-col ctr sortable" data-sort="MT" title="BE Pendiente × Factor Imp · clic para ordenar">BE Pendiente + IVA</th>
+          <th class="calc-col ctr sortable has-tip" data-sort="V" data-tip="Pronóstico Cart Q2 = Cartera del mes anterior + Facturación Bruta + BE Pendiente más IVA − Cobranza Proyectada" title="Clic para ordenar">Pronóstico Cart Q2</th>
+          <th class="calc-col ctr sortable" data-sort="I" title="Clic para ordenar">LTM Total</th>
+          <th class="calc-col ctr sortable" data-sort="dso" title="Clic para ordenar">Pronóstico DSO</th>
+          <th class="orange-col ctr sortable" data-sort="K" title="Clic para ordenar">BE Q2 ✎</th>
+          <th class="orange-col ctr sortable" data-sort="L" title="Clic para ordenar">Facturación Bruta Q2</th>
+          <th class="orange-col ctr sortable" data-sort="M" title="Clic para ordenar">BE Pendiente</th>
+          <th class="yellow-col ctr sortable" data-sort="Q" title="Clic para ordenar">Proyect Cobrar ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="R" title="Clic para ordenar">Real Cobrado ✎</th>
+          <th class="yellow-col ctr sortable" data-sort="S" title="Clic para ordenar">Pend Cobro ✎</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+      <tfoot id="tfoot-totals">
+        <tr id="totals-row">
+          <td colspan="3" class="totals-label">TOTAL — 0 clientes</td>
+          <td data-tot="E">0</td>
+          <td data-tot="J">0</td>
+          <td data-tot="P">0</td>
+          <td data-tot="MT">0</td>
+          <td data-tot="V">0</td>
+          <td data-tot="I">0</td>
+          <td data-tot="DSO">0</td>
+          <td data-tot="K">0</td>
+          <td data-tot="L">0</td>
+          <td data-tot="M">0</td>
+          <td data-tot="Q">0</td>
+          <td data-tot="R">0</td>
+          <td data-tot="S">0</td>
+          <td class="filler"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+
+</div>
+
+<div id="initial-msg" class="empty-state">
+  <div class="icon">📤</div>
+  <div style="margin-top:10px; font-size:15px;">Carga el archivo <b>Cierre Q2 2026</b> para comenzar</div>
+  <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Los otros dos archivos son opcionales (referencia)</div>
+</div>
+
+<script>
+// ============ STATE ============
+const state = {
+  rows: [],
+  filtered: [],
+  overrides: {},
+  baseValues: {},
+  selected: null,
+  targetDSO: 90,        // DSO meta global (default y para agregados)
+  dsoTargets: {},       // DSO deseable por cliente: { rowIdx: número }
+  ventaChart: null,     // Instancia Chart.js de la gráfica
+  zrepoByClientMonth: null, // { [SAP]: { '2026-04': suma, '2026-03': suma, ... } } o null si no cargado
+  zrepoByMonth: null,   // { '2026-04': suma compañía, ... } o null
+  sortField: null,      // Campo de ordenamiento elegido por el usuario (null = default DSO desc)
+  sortDir: 'asc',       // 'asc' o 'desc'
+};
+// Devuelve el DSO meta efectivo para una fila: per-row si está definido, sino el global
+function getRowTarget(idx) {
+  return state.dsoTargets[idx] !== undefined ? state.dsoTargets[idx] : state.targetDSO;
+}
+
+// Registrar plugin de datalabels (silencioso si no carga)
+if (window.Chart && window.ChartDataLabels) {
+  Chart.register(window.ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', { display: false });
+}
+
+// ============ FORMATTERS ============
+const fmt = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const fmtMoney = n => '$' + fmt(n);
+// Los importes internos están en MILES de pesos. Para mostrar siempre en Millones:
+// dividir entre 1,000 (equivale a /1,000,000 sobre pesos raw) y agregar " M".
+// Ejemplo: 100,000,000 pesos raw = 100,000 (miles) → /1000 = 100 → "100 M".
+const fmtM = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0 M';
+  return Math.round(n / 1000).toLocaleString('es-MX') + ' M';
+};
+// Variante para celdas que vienen en PESOS RAW directamente: divide entre 1,000,000.
+const fmtMraw = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0.0 M';
+  const abs = Math.abs(n);
+  // >= 1 millón: mostrar X.X M (1 decimal)
+  if (abs >= 1000000) {
+    return (n / 1000000).toLocaleString('es-MX', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + ' M';
+  }
+  // >= 1 mil: mostrar X K (sin decimales)
+  if (abs >= 1000) {
+    return Math.round(n / 1000).toLocaleString('es-MX') + ' K';
+  }
+  // < 1 mil: mostrar 0.0 M (consistente con el formato general)
+  return '0.0 M';
+};
+// Variante con 2 decimales para columnas que requieren más precisión (Pronóstico Cart Q2 y LTM Total)
+const fmtMraw2 = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0.00 M';
+  const abs = Math.abs(n);
+  if (abs >= 1000000) {
+    return (n / 1000000).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' M';
+  }
+  if (abs >= 1000) {
+    return (n / 1000).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' K';
+  }
+  if (abs === 0) return '0.00 M';
+  return n.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+};
+const fmtMoneyM = n => '$' + fmtM(n);
+const fmtNum1 = n => {
+  if (n == null || isNaN(n) || !isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('es-MX');
+};
+const num = v => {
+  if (v == null || v === '') return 0;
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+};
+
+// ============ FILE LOADING ============
+function setupUpload(inputId, cardId, callback) {
+  const input = document.getElementById(inputId);
+  const card = document.getElementById(cardId);
+  input.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, {type:'array'});
+      callback(wb, file.name);
+      card.classList.add('loaded');
+      card.title = '✓ ' + file.name;
+    } catch (err) {
+      card.title = '✗ Error: ' + err.message;
+      console.error(err);
+    }
+  });
+}
+
+setupUpload('file-cierre', 'card-cierre', (wb) => {
+  loadQ2(wb);
+});
+setupUpload('file-cartera', 'card-cartera', () => {});
+setupUpload('file-zrepo', 'card-zrepo', (wb) => { loadZREPO(wb); });
+
+// ============ PARSE ZREPO ============
+// El archivo tiene encabezados en la fila 6, datos desde la fila 7.
+// Columna A = Solicitante (SAP), Columna N = Fecha de factura, Columna U = Valor neto.
+function loadZREPO(wb) {
+  const sheet = wb.Sheets['Data'] || wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) return;
+  // Leer como aoa con dateNF para preservar fechas
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true, cellDates:true});
+  // Fila índice 5 (=row 6) son headers; datos desde índice 6 (=row 7)
+  const byClientMonth = {};
+  const byMonth = {};
+  for (let i = 6; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r) continue;
+    const sap = r[0];          // Col A
+    const fecha = r[13];       // Col N
+    const valNeto = r[20];     // Col U
+    if (typeof sap !== 'number' || sap <= 0) continue;
+    if (typeof valNeto !== 'number') continue;
+    let key = null;
+    if (fecha instanceof Date) {
+      key = fecha.getFullYear() + '-' + String(fecha.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'number') {
+      // Excel serial date
+      const d = new Date((fecha - 25569) * 86400 * 1000);
+      key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    } else if (typeof fecha === 'string' && fecha.length >= 7) {
+      // Try parse
+      const d = new Date(fecha);
+      if (!isNaN(d)) key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    }
+    if (!key) continue;
+    if (!byClientMonth[sap]) byClientMonth[sap] = {};
+    byClientMonth[sap][key] = (byClientMonth[sap][key] || 0) + valNeto;
+    byMonth[key] = (byMonth[key] || 0) + valNeto;
+  }
+  state.zrepoByClientMonth = byClientMonth;
+  state.zrepoByMonth = byMonth;
+  // Re-render gráfica si ya hay datos
+}
+
+// ============ PARSE Q2 ============
+function loadQ2(wb) {
+  const sheet = wb.Sheets['Q2'] || wb.Sheets[wb.SheetNames[0]];
+  // Lookup desde "BE Actualizado" por SAP (col C):
+  //   F = BE Q2 26 (pesos raw)          → reemplaza K
+  //   E = Vta Neta Jul25-Mar26 (raw)    → para recalcular LTM
+  //   G = BN % (decimal)                → para recalcular LTM
+  // Fórmula de la columna J en BE Actualizado: J = (E + F*(1+G)) / 1000  (en miles)
+  const beSheet = wb.Sheets['BE Actualizado'];
+  const beLookup = {};
+  if (beSheet) {
+    const beAoa = XLSX.utils.sheet_to_json(beSheet, {header:1, defval:null, raw:true});
+    for (let i = 1; i < beAoa.length; i++) {
+      const r = beAoa[i];
+      if (!r) continue;
+      const id = r[2];   // Col C = SAP
+      if (id == null) continue;
+      beLookup[id] = {
+        F: num(r[5]),    // Col F = BE Q2 26
+        E: num(r[4]),    // Col E = Vta Neta Jul25-Mar26
+        G: num(r[6])     // Col G = BN %
+      };
+    }
+  }
+
+  const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, defval:null, raw:true});
+  const rows = [];
+  for (let i = 3; i < aoa.length; i++) {
+    const r = aoa[i];
+    if (!r || !r[4]) continue;
+    // Solo aceptar filas con un SAP numérico positivo en la columna # (ahora idx 3).
+    const cid = r[3];
+    if (typeof cid !== 'number' || !(cid > 0)) continue;
+    const beRef = beLookup[cid];
+    // Estructura NUEVA del archivo (junio 2026 — agregadas Canal y Categoría al inicio):
+    //   A=Controller(0), B=Canal(1), C=Categoría(2), D=#(3), E=Nombre(4)
+    //   F=Cartera Actual(5), G=Total(6), H=Corriente(7), I=Vencido(8)
+    //   J=Cart Cierre Mes Anterior(9), K=ZREPO Mes Corriente(10), L=ZREPO Mes C/IVA(11)
+    //   M=Factor Imp(12), N=Cart Pendiente al Cierre(13), O=Pronóstico Cart Q2(14)
+    //   P=LTM Total(15), Q=Pronóstico DSO(16), R=BE Q2(17), S=Facturación Bruta Q2(18)
+    //   T=BE Pendiente(19), U=Proyectado Cobrar(20), V=Real Cobrado(21), W=Pendiente Cobro(22)
+    //   X=Estimado Cierre Q2(23), Y=Dif(24), Z=Analista(25), AA=Bloqueado(26), AB=Plazo(27)
+    const row = {
+      idx: rows.length,
+      A_controller: r[0] || '',
+      B_canal: r[1] || '',                // NUEVO: Canal (Directo / Indirecto)
+      D_categoria: (r[2] != null && r[2] !== '') ? r[2] : '',  // NUEVO: Categoría
+      B_analista: r[25] || '',            // Analista, ahora viene de col Z
+      C_id: cid,
+      D_nombre: r[4] || '',
+      E: num(r[5]), F: num(r[6]), G: num(r[7]), H: num(r[8]),
+      I: num(r[15]),                      // LTM Total ← col P (idx 15)
+      J: num(r[9]),                       // Cart Mes Anterior ← col J (idx 9)
+      K: beRef !== undefined ? beRef.F : num(r[17]),  // BE Q2 ← col R (idx 17)
+      L: num(r[18]),                      // Facturación Bruta Q2 ← col S (idx 18)
+      M: num(r[19]),                      // BE Pendiente ← col T (idx 19)
+      N: num(r[23]),                      // Estimado Cierre Q2 ← col X (idx 23)
+      O: num(r[10]),                      // ZREPO Mes Corriente ← col K (idx 10)
+      P: num(r[11]),                      // ZREPO Mes C/IVA ← col L (idx 11)
+      Q: num(r[20]),                      // Proyectado a Cobrar ← col U (idx 20)
+      R: num(r[21]),                      // Real Cobrado ← col V (idx 21)
+      S: num(r[22]),                      // Pendiente de Cobro ← col W (idx 22)
+      T: num(r[12]),                      // Factor Imp ← col M (idx 12)
+      U: num(r[13]),                      // Cart Pendiente al Cierre ← col N (idx 13)
+      V: num(r[14]),                      // Pronóstico Cart Q2 ← col O (idx 14)
+      W: num(r[16]),                      // Pronóstico DSO ← col Q (idx 16)
+      // Status (Bloqueado/Desbloqueado) y Plazo, ahora vienen del archivo Q2
+      Y_blocked: (() => { const v = r[26]; if (v == null || v === '') return false; const s = String(v).toLowerCase(); return s === 'true' || s === 'sí' || s === 'si' || s === 'bloqueado' || s === '1' || v === true; })(),
+      AA_plazo: (r[27] != null && r[27] !== '') ? r[27] : '',
+      BE_E: beRef !== undefined ? beRef.E : null,
+      BE_G: beRef !== undefined ? beRef.G : null,
+    };
+    rows.push(row);
+  }
+  state.rows = rows;
+  state.baseValues = {};
+  rows.forEach(r => {
+    state.baseValues[r.idx] = { U: r.U, V: r.V, W: r.W, K: r.K, Q: r.Q, R: r.R, S: r.S };
+  });
+  state.overrides = {};
+  initFilters();
+  document.getElementById('initial-msg').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  applyFilters();
+}
+
+// ============ COMPUTATIONS ============
+function getLive(r) {
+  const o = state.overrides[r.idx] || {};
+  const K = o.K !== undefined ? o.K : r.K;
+  const R = o.R !== undefined ? o.R : r.R;
+  let S = o.S !== undefined ? o.S : r.S;
+  let Q;
+  if (o.Q !== undefined) {
+    // Q se editó manualmente. Si S no fue editada, la derivamos: S = Q - R
+    // (mantiene la fórmula original del archivo y propaga el cambio a U/V/W/DSO)
+    Q = o.Q;
+    if (o.S === undefined) S = Q - R;
+  } else {
+    // Q se calcula automáticamente como R + S
+    Q = R + S;
+  }
+  const M = K - r.L;
+  const U = r.J + r.P - R - S;
+  // Factor Imp: si es 0/nulo/inválido, se usa 1 para que no anule el BE Pendiente
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const V = (M * factorT) + U;
+  // LTM (I): preserva el LTM Total del Excel cuando K no fue editado.
+  // Cuando el usuario edita K (BE Q2), aplicamos solo el DELTA del cambio
+  // multiplicado por (1+BE_G) para mantener la sensibilidad sin distorsionar la base.
+  let I = r.I;
+  if (r.BE_G != null && K !== r.K) {
+    I = r.I + (K - r.K) * (1 + r.BE_G);
+  }
+  const W = I !== 0 ? (V / I) * 360 : 0;
+  return {K, Q, R, S, M, U, V, W, I, hasVenta: I !== 0};
+}
+
+// Status banding by DSO (recibe el target específico de la fila)
+function dsoLevel(W, hasVenta, target) {
+  target = target == null ? state.targetDSO : target;
+  if (!hasVenta) return 'na';
+  if (W <= Math.max(30, target - 30)) return 'excellent';
+  if (W <= target) return 'good';
+  if (W <= target + 20) return 'warning';
+  if (W <= target + 60) return 'risk';
+  return 'critical';
+}
+const levelLabel = {
+  excellent: '🟢 Excelente',
+  good: '🟢 OK',
+  warning: '🟡 Atención',
+  risk: '🟠 Riesgo',
+  critical: '🔴 Crítico',
+  na: '— Sin venta'
+};
+
+// Suggestion logic per client - usa el DSO meta por fila
+function getSuggestion(r, live) {
+  const target = getRowTarget(r.idx);
+  if (!live.hasVenta) {
+    return {
+      type: 'na',
+      lines: [{icon:'ℹ', text:'Sin venta LTM — no aplica DSO', amountKind:null, amount:null}],
+      cobranzaExtra: 0, ventaExtra: 0, ventaMax: 0, vTarget: 0, target
+    };
+  }
+  // V_target: cartera óptima para mantener DSO ≤ target → V_target = I * target / 360
+  const vTarget = live.I * target / 360;
+  const cobranzaExtra = Math.max(0, live.V - vTarget);
+  const iRequired = live.V * 360 / target; // venta requerida para soportar cartera actual al DSO meta
+  const ventaMaxAlMeta = vTarget * 360 / target; // = I (venta máxima soportada con cartera óptima)
+
+  const lines = [];
+  if (live.W <= target) {
+    const margenCartera = vTarget - live.V;
+    const ventaExtraSoportada = margenCartera * 360 / target;
+    lines.push({icon:'✓', text:`En meta (${target}d)`, amountKind:'pos', amount: 'DSO ' + fmtNum1(live.W) + 'd'});
+    lines.push({icon:'💰', text:'Cartera óptima máx.', amountKind:'pos', amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📈', text:'Venta extra absorbible', amountKind:'pos', amount: fmtMoneyM(Math.max(0, ventaExtraSoportada))});
+  } else {
+    lines.push({icon:'⚠', text:`Cobrar para llegar a ${target}d`, amountKind:'neg', amount: fmtMoneyM(cobranzaExtra)});
+    lines.push({icon:'💰', text:'Cartera óptima', amountKind:null, amount: fmtMoneyM(vTarget)});
+    lines.push({icon:'📊', text:'O subir venta a', amountKind:null, amount: fmtMoneyM(iRequired)});
+  }
+  return { type: live.W <= target ? 'ok' : 'over', lines, cobranzaExtra, vTarget, ventaMaxAlMeta, target };
+}
+
+// ============ FILTERS ============
+function initFilters() {
+  const controllers = [...new Set(state.rows.map(r => r.A_controller).filter(Boolean))].sort();
+  // Canal viene literal del archivo (Directo / Indirecto). Fallback a B_analista por compatibilidad con datos embebidos viejos.
+  const canales = [...new Set(state.rows.map(r => r.B_canal || r.B_analista).filter(Boolean))].sort();
+  const fc = document.getElementById('filter-controller');
+  const fa = document.getElementById('filter-analista');
+  fc.innerHTML = '<option value="">Director: Todos</option>' + controllers.map(c => `<option value="${c}">${c}</option>`).join('');
+  fa.innerHTML = '<option value="">Canal: Todos</option>' + canales.map(a => `<option value="${a}">${a}</option>`).join('');
+  populateCategoria();
+}
+
+// Sub-filtro de Categoría: depende del Canal seleccionado.
+// Si no hay canal, muestra todas las categorías del set; al elegir Canal X, solo las categorías que existen dentro de X.
+function populateCategoria() {
+  const cat = document.getElementById('filter-categoria');
+  if (!cat) return;
+  const canalSel = document.getElementById('filter-analista').value;
+  const pool = canalSel
+    ? state.rows.filter(r => (r.B_canal || r.B_analista) === canalSel)
+    : state.rows;
+  // Las categorías vacías se muestran como "(En blanco)" para que se puedan filtrar
+  const cats = [...new Set(pool.map(r => (r.D_categoria && String(r.D_categoria).trim()) ? r.D_categoria : '(En blanco)'))].sort();
+  const prev = cat.value;
+  cat.innerHTML = '<option value="">Categoría: Todos</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (cats.includes(prev)) cat.value = prev; else cat.value = '';
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const c = document.getElementById('filter-controller').value;
+  const a = document.getElementById('filter-analista').value;
+  const catEl = document.getElementById('filter-categoria');
+  const cat = catEl ? catEl.value : '';
+  const s = document.getElementById('filter-status').value;
+  const b = document.getElementById('filter-block').value;
+  state.filtered = state.rows.filter(r => {
+    if (c && r.A_controller !== c) return false;
+    // Canal: prefiere B_canal (Directo/Indirecto del archivo nuevo). Fallback a B_analista.
+    if (a && (r.B_canal || r.B_analista) !== a) return false;
+    // Categoría: vacíos cuentan como "(En blanco)"
+    if (cat) {
+      const rowCat = (r.D_categoria && String(r.D_categoria).trim()) ? r.D_categoria : '(En blanco)';
+      if (rowCat !== cat) return false;
+    }
+    if (q) {
+      const hay = (r.D_nombre + ' ' + r.C_id).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (s) {
+      const live = getLive(r);
+      if (dsoLevel(live.W, live.hasVenta, getRowTarget(r.idx)) !== s) return false;
+    }
+    if (b === 'blocked' && !r.Y_blocked) return false;
+    if (b === 'unblocked' && r.Y_blocked) return false;
+    return true;
+  });
+  // Ordenamiento: si el usuario eligió un campo, usa ese; sino default por DSO descendente
+  if (state.sortField) {
+    const field = state.sortField;
+    const dir = state.sortDir === 'desc' ? -1 : 1;
+    const lvlOrder = { excellent:1, good:2, warning:3, risk:4, critical:5, na:6 };
+    state.filtered.sort((a, b) => {
+      let va, vb;
+      if (field === 'status') {
+        // Ordenar por estado de bloqueo: bloqueados primero (asc)
+        va = a.Y_blocked ? 0 : 1;
+        vb = b.Y_blocked ? 0 : 1;
+      } else if (field === 'plazo') {
+        const toN = v => {
+          if (v == null || v === '') return Number.POSITIVE_INFINITY;
+          if (typeof v === 'number') return v;
+          if (typeof v === 'string' && /inmediat/i.test(v)) return 0;
+          const n = parseFloat(v); return isNaN(n) ? Number.POSITIVE_INFINITY : n;
+        };
+        va = toN(a.AA_plazo); vb = toN(b.AA_plazo);
+      } else if (field === 'cliente') {
+        va = (a.D_nombre || '').toLowerCase();
+        vb = (b.D_nombre || '').toLowerCase();
+      } else if (field === 'dso') {
+        const liveA = getLive(a), liveB = getLive(b);
+        va = liveA.hasVenta && liveA.I !== 0 ? (liveA.V / liveA.I) * 360 : -1;
+        vb = liveB.hasVenta && liveB.I !== 0 ? (liveB.V / liveB.I) * 360 : -1;
+      } else if (field === 'L') {
+        va = a.L; vb = b.L;
+      } else if (field === 'P') {
+        va = a.P; vb = b.P;
+      } else if (field === 'E') {
+        // Cartera Actual dinámica = Cart Mes Anterior + FB Mes C/IVA − Real Cobrado (live)
+        const liveA = getLive(a); const liveB = getLive(b);
+        va = a.J + a.P - liveA.R; vb = b.J + b.P - liveB.R;
+      } else if (field === 'J') {
+        va = a.J; vb = b.J;
+      } else if (field === 'MT') {
+        // BE Pendiente + IVA = live.M × Factor Imp (fallback 1 si T = 0)
+        const lA = getLive(a); const lB = getLive(b);
+        const fA = (a.T && a.T !== 0) ? a.T : 1;
+        const fB = (b.T && b.T !== 0) ? b.T : 1;
+        va = lA.M * fA; vb = lB.M * fB;
+      } else {
+        // Campos de getLive: V, I, K, M, Q, R, S
+        va = getLive(a)[field];
+        vb = getLive(b)[field];
+      }
+      if (va < vb) return -1 * dir;
+      if (va > vb) return  1 * dir;
+      return 0;
+    });
+  } else {
+    // Default: DSO descendente
+    state.filtered.sort((a, b) => getLive(b).W - getLive(a).W);
+  }
+  render();
+}
+
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('filter-controller').addEventListener('change', applyFilters);
+document.getElementById('filter-analista').addEventListener('change', () => {
+  // Al cambiar Canal, repoblamos el sub-filtro Categoría con las del canal elegido
+  populateCategoria();
+  applyFilters();
+});
+document.getElementById('filter-categoria').addEventListener('change', applyFilters);
+document.getElementById('filter-status').addEventListener('change', applyFilters);
+document.getElementById('filter-block').addEventListener('change', applyFilters);
+document.getElementById('target-dso').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value);
+  if (isNaN(v) || v < 1) return;
+  state.targetDSO = v;
+  document.getElementById('hdr-target-dso').textContent = v;
+  applyFilters();
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  state.overrides = {};
+  state.dsoTargets = {};
+  applyFilters();
+});
+document.getElementById('btn-export').addEventListener('click', exportExcel);
+
+// ============ ORDENAMIENTO DE COLUMNAS ============
+function updateSortIndicators() {
+  document.querySelectorAll('thead th.sortable').forEach(th => {
+    th.classList.remove('sorted-asc', 'sorted-desc');
+    if (state.sortField === th.dataset.sort) {
+      th.classList.add(state.sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    }
+  });
+}
+document.querySelectorAll('thead th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.dataset.sort;
+    if (state.sortField === field) {
+      // 3 estados cíclicos: asc → desc → ninguno (default DSO desc)
+      if (state.sortDir === 'asc') state.sortDir = 'desc';
+      else { state.sortField = null; state.sortDir = 'asc'; }
+    } else {
+      state.sortField = field;
+      state.sortDir = 'asc';
+    }
+    updateSortIndicators();
+    applyFilters();
+  });
+});
+
+// ============ ZOOM DE KPIs (A+/A-/Reset) ============
+(function() {
+  const root = document.documentElement;
+  const KEY = 'kpi-zoom-v1';
+  function clamp(z) { return Math.max(0.7, Math.min(2.0, z)); }
+  function readZoom() {
+    const v = parseFloat(localStorage.getItem(KEY) || '1.15');
+    return isNaN(v) ? 1 : clamp(v);
+  }
+  function setZoom(z) {
+    const c = clamp(z);
+    root.style.setProperty('--kpi-zoom', c);
+    try { localStorage.setItem(KEY, c.toFixed(2)); } catch(e) {}
+    const reset = document.getElementById('zoom-reset');
+    if (reset) reset.textContent = Math.round(c * 100) + '%';
+  }
+  // Aplicar el zoom guardado al cargar
+  setZoom(readZoom());
+  // Listeners
+  const zin  = document.getElementById('zoom-in');
+  const zout = document.getElementById('zoom-out');
+  const zres = document.getElementById('zoom-reset');
+  if (zin)  zin.addEventListener('click',  () => setZoom(readZoom() + 0.1));
+  if (zout) zout.addEventListener('click', () => setZoom(readZoom() - 0.1));
+  if (zres) zres.addEventListener('click', () => setZoom(1.15));
+})();
+
+// ============ ZOOM DE DATOS (D-/100%/D+) ============
+(function() {
+  const root = document.documentElement;
+  const KEY = 'data-zoom-v1';
+  function clamp(z) { return Math.max(0.7, Math.min(2.5, z)); }
+  function readDz() {
+    const v = parseFloat(localStorage.getItem(KEY) || '1');
+    return isNaN(v) ? 1 : clamp(v);
+  }
+  function setDz(z) {
+    const c = clamp(z);
+    root.style.setProperty('--data-zoom', c);
+    try { localStorage.setItem(KEY, c.toFixed(2)); } catch(e) {}
+    const reset = document.getElementById('data-zoom-reset');
+    if (reset) reset.textContent = Math.round(c * 100) + '%';
+  }
+  setDz(readDz());
+  const dzin  = document.getElementById('data-zoom-in');
+  const dzout = document.getElementById('data-zoom-out');
+  const dzres = document.getElementById('data-zoom-reset');
+  if (dzin)  dzin.addEventListener('click',  () => setDz(readDz() + 0.1));
+  if (dzout) dzout.addEventListener('click', () => setDz(readDz() - 0.1));
+  if (dzres) dzres.addEventListener('click', () => setDz(1));
+})();
+
+// ============ RENDER TABLE ============
+function render() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  state.filtered.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    const rowTarget = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+    const sug = getSuggestion(r, live);
+    const tr = document.createElement('tr');
+    tr.dataset.idx = r.idx;
+    if (state.selected === r.idx) tr.classList.add('selected');
+    const vChg = Math.abs(live.V - base.V) > 0.01;
+    const o = state.overrides[r.idx] || {};
+
+    // DSO progress bar: rango 0-200d, marcador en meta del cliente
+    const dsoMax = 200;
+    const targetPct = Math.min(100, (rowTarget / dsoMax) * 100);
+
+    // Abreviar la palabra "Administración" → "A." para reducir el ancho de los nombres más largos
+    const _dn = String(r.D_nombre || '').replace(/\bADMINISTRACI[ÓO]N\b/gi, 'A.');
+    const nameShort = _dn.length > 45 ? _dn.slice(0,45)+'…' : _dn;
+    const liveI = live.I;
+    const iChanged = Math.abs(liveI - r.I) > 0.01;
+    // Pronóstico DSO en vivo = (V/I)·360 (fórmula original del archivo)
+    const dsoW = liveI !== 0 ? (live.V / liveI) * 360 : 0;
+    const lvlW = dsoLevel(dsoW, liveI !== 0, rowTarget);
+    const wPct = Math.min(100, Math.max(0, (dsoW / dsoMax) * 100));
+    const wChg = Math.abs(dsoW - base.W) > 0.5;
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    const M_IVA = live.M * factorT;
+    tr.innerHTML = `
+      <td class="text col-status"><span class="status-badge lvl-${r.Y_blocked?'critical':'good'}" title="${r.Y_blocked?'Bloqueado':'Desbloqueado'} (col Z del Cierre Q2)">${r.Y_blocked?'🔒 BLOQ':'🟢 OK'}</span></td>
+      <td class="text ctr col-plazo" title="Plazo de pago: ${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+' días' : r.AA_plazo) : '—'}">${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+'d' : (String(r.AA_plazo).length>4 ? String(r.AA_plazo).slice(0,3)+'.' : r.AA_plazo)) : '—'}</td>
+      <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_canal || r.B_analista}"><b>${nameShort}</b><br><span class="client-info">${r.C_id} - ${r.A_controller}${(r.B_canal || r.B_analista) ? ' - ' + (r.B_canal || r.B_analista) : ''}</span></td>
+      <td class="blue-cell has-tip" data-tip="Cartera Actual = Cart Mes Anterior (${fmtMraw(r.J)}) + Fac. Bruta Mes C/IVA (${fmtMraw(r.P)}) − Real Cobrado (${fmtMraw(live.R)}) = ${fmtMraw(r.J + r.P - live.R)}">${(() => {
+        const live_E = r.J + r.P - live.R;
+        const eChg = Math.abs(live_E - r.E) > 0.01;
+        return `<span style="color:${eChg ? (live_E < r.E ? '#047857' : '#b91c1c') : 'inherit'}; font-weight:${eChg?700:600};">${fmtMraw(live_E)}</span>`;
+      })()}</td>
+      <td class="blue-cell pronos-related">${fmtMraw(r.J)}</td>
+      <td class="blue-cell pronos-related">${fmtMraw(r.P)}</td>
+      <td class="blue-cell has-tip pronos-related" data-tip="Factor Impuesto Promedio: ${r.T!=null && !isNaN(r.T) ? Number(r.T).toFixed(2) : '—'}">${fmtMraw(M_IVA)}</td>
+      <td class="calc-cell pronos-trigger dso-related has-tip ${vChg?'changed':''}" data-tip="Pronóstico Cart Q2 = Cart Mes Anterior (${fmtMraw(r.J)}) + Fac. Bruta Mes C/IVA (${fmtMraw(r.P)}) + BE Pendiente + IVA (${fmtMraw(M_IVA)}) − Proyect Cobrar (${fmtMraw(live.Q)}) = ${fmtMraw2(live.V)}">${fmtMraw2(live.V)}</td>
+      <td class="calc-cell dso-related ${iChanged?'changed':''}" title="LTM = (E + BE_Q2 × (1+BN%)) / 1000">${fmtMraw2(liveI)}</td>
+      <td class="dso-cell dso-trigger has-tip lvl-${lvlW} ${wChg?'changed':''}" data-tip="Pronóstico DSO = (Pronóstico Cart Q2 / LTM Total) × 360 = (${fmtMraw2(live.V)} / ${fmtMraw2(liveI)}) × 360 = ${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}">
+        <div class="dso-bar" title="DSO ${fmtNum1(dsoW)}d / meta ${rowTarget}d">
+          <div class="dso-bar-fill lvl-${lvlW}" style="width:${wPct}%"></div>
+          <div class="dso-bar-target" style="left:${targetPct}%"></div>
+        </div>
+        <span>${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}</span>
+      </td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.K!==undefined?'changed':''}" data-field="K" data-idx="${r.idx}" value="${(live.K/1000000).toFixed(1)}" step="0.1" title="Captura en Millones (10.5 = 10.5M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td>${fmtMraw(r.L)}</td>
+      <td class="calc-cell">${fmtMraw(live.M)}</td>
+      <td class="input-cell pronos-related"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.Q!==undefined?'changed':''}" data-field="Q" data-idx="${r.idx}" value="${(live.Q/1000000).toFixed(1)}" step="0.1" title="Captura en Millones (10.5 = 10.5M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.R!==undefined?'changed':''}" data-field="R" data-idx="${r.idx}" value="${(live.R/1000000).toFixed(1)}" step="0.1" title="Captura en Millones (10.5 = 10.5M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="input-cell"><div class="step-wrap"><button type="button" class="num-step" data-step="-1" tabindex="-1">−</button><input type="number" inputmode="decimal" class="edit ${o.S!==undefined?'changed':''}" data-field="S" data-idx="${r.idx}" value="${(live.S/1000000).toFixed(1)}" step="0.1" title="Captura en Millones (10.5 = 10.5M)"><button type="button" class="num-step" data-step="1" tabindex="-1">+</button></div><span class="m-suffix">M</span></td>
+      <td class="filler"></td>
+    `;
+    tr.addEventListener('click', (ev) => {
+      if (ev.target.tagName === 'INPUT') return;
+      state.selected = r.idx;
+      showDetail(r);
+      render();
+    });
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+
+  // Attach input listeners (campos financieros K/Q/R/S)
+  tbody.querySelectorAll('input.edit:not(.dso-target)').forEach(inp => {
+    inp.addEventListener('input', onEdit);
+    inp.addEventListener('focus', e => e.target.select());
+    // Si al perder el foco hay un render pendiente por debounce, ejecutarlo de inmediato
+    inp.addEventListener('blur', () => {
+      if (_editDebounce) {
+        clearTimeout(_editDebounce);
+        _editDebounce = null;
+        render();
+      }
+    });
+  });
+  // Botones +/- (visibles en móvil) que disparan el mismo evento input
+  tbody.querySelectorAll('.num-step').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const wrap = btn.parentElement;
+      const inp = wrap.querySelector('input.edit');
+      if (!inp) return;
+      const step = parseFloat(btn.dataset.step) || 1;
+      const cur = parseFloat(inp.value) || 0;
+      // Mantener formato de 1 decimal en campos financieros K/Q/R/S
+      inp.value = inp.classList.contains('dso-target') ? (cur + step) : (cur + step).toFixed(1);
+      // Disparar el evento input para que onEdit recalcule todo
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+  // Listener para DSO deseable por fila
+  tbody.querySelectorAll('input.edit.dso-target').forEach(inp => {
+    inp.addEventListener('input', onEditDSO);
+    inp.addEventListener('focus', e => e.target.select());
+  });
+
+  document.getElementById('row-count').textContent = state.filtered.length;
+  document.getElementById('row-total').textContent = state.rows.length;
+
+  updateKPIs();
+  updateInsights();
+  updateFilteredKPIs();
+  updateTotalsFooter();
+  if (state.selected != null) {
+    const r = state.rows.find(x => x.idx === state.selected);
+    if (r) showDetail(r);
+  }
+}
+
+// ============ GRÁFICA: Venta por mes vs Compañía (con etiquetas de datos) ============
+// ============ TOTALES FOOTER ============
+// Suma de todas las columnas financieras del filtrado actual.
+// Excepción: Pronóstico DSO = promedio ponderado = (Σ V / Σ I) × 360
+function updateTotalsFooter() {
+  const foot = document.getElementById('tfoot-totals');
+  if (!foot) return;
+  const rows = state.filtered || [];
+  const sums = {E:0, J:0, P:0, MT:0, V:0, I:0, K:0, L:0, M:0, Q:0, R:0, S:0};
+  rows.forEach(r => {
+    const live = getLive(r);
+    const _fT = (r.T && r.T !== 0) ? r.T : 1;
+    // Para V (Pronóstico Cart Q2) usamos r.V (base del archivo) cuando no hay ediciones del usuario.
+    // Esto evita el bug del fallback "factor=1 cuando T=0" en clientes sin venta, que sobreestima live.V.
+    const o = state.overrides[r.idx] || {};
+    const hasEdits = (o.K !== undefined) || (o.R !== undefined) || (o.S !== undefined) || (o.Q !== undefined);
+    const vForTotal = hasEdits ? live.V : r.V;
+    sums.E  += (r.J + r.P - live.R);    // Cartera Actual dinámica
+    sums.J  += r.J;
+    sums.P  += r.P;
+    sums.MT += live.M * _fT;            // BE Pendiente + IVA
+    sums.V  += vForTotal;
+    sums.I  += live.I;
+    sums.K  += live.K;
+    sums.L  += r.L;
+    sums.M  += live.M;
+    sums.Q  += live.Q;
+    sums.R  += live.R;
+    sums.S  += live.S;
+  });
+  // DSO ponderado: (ΣV / ΣI) × 360 — usa el V consistente con la columna (con/sin bug)
+  const dsoPond = (sums.I > 0) ? (sums.V / sums.I) * 360 : 0;
+
+  const setCell = (key, value) => {
+    const td = foot.querySelector(`td[data-tot="${key}"]`);
+    if (td) td.textContent = value;
+  };
+  setCell('E',  fmtMraw(sums.E));
+  setCell('J',  fmtMraw(sums.J));
+  setCell('P',  fmtMraw(sums.P));
+  setCell('MT', fmtMraw(sums.MT));
+  setCell('V',  fmtMraw(sums.V));
+  setCell('I',  fmtMraw(sums.I));
+  setCell('DSO', (sums.I > 0 && rows.length > 0) ? (Math.round(dsoPond) + 'd') : '—');
+  setCell('K',  fmtMraw(sums.K));
+  setCell('L',  fmtMraw(sums.L));
+  setCell('M',  fmtMraw(sums.M));
+  setCell('Q',  fmtMraw(sums.Q));
+  setCell('R',  fmtMraw(sums.R));
+  setCell('S',  fmtMraw(sums.S));
+  // Etiqueta
+  const label = foot.querySelector('td.totals-label');
+  if (label) label.textContent = `TOTAL — ${rows.length} cliente${rows.length === 1 ? '' : 's'}`;
+}
+
+function renderVentaChart() {
+  if (!window.Chart || !state.rows.length) return;
+  const ctx = document.getElementById('chart-venta');
+  if (!ctx) return;
+
+  // Asegurar registro del plugin datalabels (si está disponible)
+  if (window.ChartDataLabels && !Chart._dlRegistered) {
+    Chart.register(window.ChartDataLabels);
+    Chart.defaults.set('plugins.datalabels', { display: false });
+    Chart._dlRegistered = true;
+  }
+
+  const focus = state.filtered.length && state.filtered.length < state.rows.length
+    ? state.filtered : state.rows;
+  const isFiltered = focus !== state.rows;
+  const focusLabel = isFiltered
+    ? (focus.length === 1 ? focus[0].D_nombre.slice(0,28) : `${focus.length} clientes`)
+    : 'Compañía';
+
+  // 12 etiquetas mes (último año, mes corriente al final) — key 'YYYY-MM' para lookup
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now = new Date();
+  const labels = [];
+  const keys = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(months[d.getMonth()]);
+    keys.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  }
+
+  let focusData, companyData, dataSource;
+  if (state.zrepoByMonth) {
+    // === Datos de ZREPO: columna U (Valor Neto) agrupados por columna N (Fecha de factura) ===
+    dataSource = 'ZREPO Vta Neta';
+    // Compañía: suma de Valor Neto por mes en todo el archivo
+    companyData = keys.map(k => state.zrepoByMonth[k] || 0);
+    // Foco: suma de Valor Neto por mes solo para los SAPs filtrados
+    if (isFiltered) {
+      const sapsFiltrados = new Set(focus.map(r => r.C_id));
+      focusData = keys.map(k => {
+        let s = 0;
+        sapsFiltrados.forEach(sap => {
+          const cm = state.zrepoByClientMonth[sap];
+          if (cm && cm[k] != null) s += cm[k];
+        });
+        return s;
+      });
+    } else {
+      focusData = companyData.slice(); // sin filtro, foco = compañía
+    }
+  } else {
+    // Fallback al cálculo previo (promedio LTM / 12)
+    dataSource = 'Promedio LTM / 12';
+    const totalCompanyAnnual = state.rows.reduce((a, r) => a + getLive(r).I, 0);
+    const focusAnnual = focus.reduce((a, r) => a + getLive(r).I, 0);
+    companyData = Array(12).fill(totalCompanyAnnual / 12);
+    focusData = Array(12).fill(focusAnnual / 12);
+  }
+
+  // Actualizar leyenda dinámica
+  const legFocus = document.getElementById('bc-leg-focus');
+  if (legFocus) legFocus.textContent = focusLabel + ' / mes — ' + dataSource;
+  const legCompany = document.getElementById('bc-leg-company');
+  if (legCompany) legCompany.textContent = (state.zrepoByMonth ? 'Compañía / mes — Vta Neta' : 'Promedio compañía / mes');
+
+  if (state.ventaChart) state.ventaChart.destroy();
+  state.ventaChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: focusLabel + ' / mes',
+          data: focusData,
+          backgroundColor: '#0891b2',
+          borderRadius: 3,
+          categoryPercentage: 0.75,
+          barPercentage: 0.92,
+          datalabels: {
+            display: true,
+            anchor: 'end', align: 'end', offset: 2,
+            font: { size: 9, weight: '700' },
+            color: '#0e7490',
+            formatter: v => fmtMraw(v)
+          }
+        },
+        {
+          label: 'Promedio compañía / mes',
+          data: companyData,
+          type: 'line',
+          borderColor: '#475569',
+          borderWidth: 2,
+          borderDash: [4, 3],
+          pointRadius: 3,
+          pointBackgroundColor: '#475569',
+          fill: false,
+          datalabels: {
+            display: ctx => ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1,
+            align: 'top', offset: 4,
+            font: { size: 9, weight: '700' },
+            color: '#1e293b',
+            formatter: v => fmtMraw(v)
+          }
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18, bottom: 4 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: c => c.dataset.label + ': $' + fmtMraw(c.parsed.y) }
+        }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#475569' }, grid: { display: false } },
+        y: { display: false, beginAtZero: true, grace: '15%' }
+      }
+    }
+  });
+}
+
+let _editDebounce = null;
+function _renderAndRestoreFocus(focusInfo) {
+  render();
+  const sel = document.querySelector(`input.edit[data-idx="${focusInfo.idx}"][data-field="${focusInfo.field}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+function onEdit(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const field = e.target.dataset.field;
+  // El usuario captura en Millones; internamente guardamos en pesos raw. Multiplicamos por 1,000,000.
+  const rawInput = e.target.value === '' ? 0 : parseFloat(e.target.value);
+  if (isNaN(rawInput)) return;
+  const val = rawInput * 1000000;
+  if (!state.overrides[idx]) state.overrides[idx] = {};
+  const baseField = state.baseValues[idx][field];
+  if (Math.abs(val - baseField) < 0.5) {
+    delete state.overrides[idx][field];
+    if (Object.keys(state.overrides[idx]).length === 0) delete state.overrides[idx];
+  } else {
+    state.overrides[idx][field] = val;
+  }
+  const focusInfo = { idx, field };
+  // Si el evento NO tiene inputType (botones +/- programáticos): render inmediato.
+  // Si SÍ tiene inputType (tecleo del usuario): debounce para permitir escribir varios dígitos seguidos.
+  const isProgrammatic = !e.inputType;
+  if (_editDebounce) { clearTimeout(_editDebounce); _editDebounce = null; }
+  if (isProgrammatic) {
+    _renderAndRestoreFocus(focusInfo);
+  } else {
+    _editDebounce = setTimeout(() => {
+      _editDebounce = null;
+      _renderAndRestoreFocus(focusInfo);
+    }, 400);
+  }
+}
+
+// ============ DSO Target por fila ============
+function onEditDSO(e) {
+  const idx = parseInt(e.target.dataset.idx);
+  const val = parseInt(e.target.value);
+  if (isNaN(val) || val < 1 || val > 365) return;
+  // Si coincide con el global, eliminar el override (toma el global por defecto)
+  if (val === state.targetDSO) delete state.dsoTargets[idx];
+  else state.dsoTargets[idx] = val;
+  // Re-render preservando foco
+  render();
+  const sel = document.querySelector(`input.edit.dso-target[data-idx="${idx}"]`);
+  if (sel) {
+    sel.focus();
+    const len = sel.value.length;
+    try { sel.setSelectionRange(len, len); } catch(_) {}
+  }
+}
+
+// ============ KPIs ============
+// La primera sección de KPIs siempre muestra el TOTAL COMPAÑÍA (todas las filas),
+// sin importar el filtro aplicado a la tabla.
+function updateKPIs() {
+  let totE = 0, totU = 0, totV = 0, totI = 0, totUbase = 0, totVbase = 0;
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
+    totUbase += base.U; totVbase += base.V;
+  });
+  // DSO Global W = (Pronóstico Cart Tot al Cierre Q2 (V) / LTM Total (I)) * 360
+  const dsoLive = totI !== 0 ? (totV / totI) * 360 : 0;
+  const dsoBase = totI !== 0 ? (totVbase / totI) * 360 : 0;
+  // Importes en KPIs dividen entre 1,000,000 con sufijo " M" (fmtMraw)
+  document.getElementById('kpi-cartera').textContent = '$' + fmtMraw(totE);
+  document.getElementById('kpi-cartera-sub').textContent = state.filtered.length + ' clientes';
+  // KPI: Pronóstico Cart Tot al Cierre Q2 = total directo de la columna V del archivo (base)
+  document.getElementById('kpi-v').textContent = '$' + fmtMraw(totVbase);
+  const dV = totV - totVbase;
+  const elV = document.getElementById('kpi-v-delta');
+  elV.textContent = (dV >= 0 ? '▲+$' : '▼$') + fmtMraw(Math.abs(dV)) + ' vs escenario';
+  elV.className = 'delta ' + (Math.abs(dV) < 1 ? '' : (dV >= 0 ? 'up' : 'down'));
+  document.getElementById('kpi-w').textContent = fmtNum1(dsoLive) + ' d';
+  const dW = dsoLive - dsoBase;
+  const elW = document.getElementById('kpi-w-delta');
+  elW.textContent = (dW >= 0 ? '▲+' : '▼') + fmtNum1(Math.abs(dW)) + ' d';
+  elW.className = 'delta ' + (Math.abs(dW) < 0.05 ? '' : (dW >= 0 ? 'down' : 'up'));
+  document.getElementById('kpi-count').textContent = state.rows.length;
+  document.getElementById('kpi-cartera-sub').textContent = 'Total compañía';
+  const cc = document.getElementById('comp-count');
+  if (cc) cc.textContent = state.rows.length;
+
+  // Color DSO KPI by level (usando el global como referencia)
+  const lvl = dsoLevel(dsoLive, totI !== 0, state.targetDSO);
+  const dsoCard = document.getElementById('kpi-card-w');
+  dsoCard.className = 'kpi-card ' + (
+    lvl === 'excellent' || lvl === 'good' ? 'dso-green'
+    : lvl === 'warning' ? 'dso-yellow'
+    : lvl === 'risk' ? 'dso-orange'
+    : lvl === 'critical' ? 'dso-red'
+    : ''
+  );
+}
+
+// ============ INSIGHTS ============
+function updateInsights() {
+  const buckets = { excellent:{n:0,cart:0}, good:{n:0,cart:0}, warning:{n:0,cart:0}, risk:{n:0,cart:0}, critical:{n:0,cart:0}, na:{n:0,cart:0} };
+  let totCobranzaExtra = 0; // sum of (V - V_target) for those over
+  let totVentaExtra = 0;    // sum of capacity to grow venta for those in meta
+  let totV = 0, totI = 0;
+  // Tarjetas semáforo siempre se calculan sobre el total compañía (state.rows)
+  state.rows.forEach(r => {
+    const live = getLive(r);
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    buckets[lvl].n++;
+    buckets[lvl].cart += live.V;
+    totV += live.V; totI += live.I;
+    if (live.hasVenta) {
+      const vTarget = live.I * tgt / 360;
+      if (live.V > vTarget) totCobranzaExtra += (live.V - vTarget);
+      else totVentaExtra += (vTarget - live.V) * (360 / tgt); // extra venta soportada
+    }
+  });
+
+  document.getElementById('ic-ok').textContent = (buckets.excellent.n + buckets.good.n);
+  document.getElementById('ic-ok-sub').textContent = 'Cartera $' + fmtMraw(buckets.excellent.cart + buckets.good.cart);
+  document.getElementById('ic-warn').textContent = buckets.warning.n;
+  document.getElementById('ic-warn-sub').textContent = 'Cartera $' + fmtMraw(buckets.warning.cart);
+  document.getElementById('ic-risk').textContent = buckets.risk.n;
+  document.getElementById('ic-risk-sub').textContent = 'Cartera $' + fmtMraw(buckets.risk.cart);
+  document.getElementById('ic-crit').textContent = buckets.critical.n;
+  document.getElementById('ic-crit-sub').textContent = 'Cartera $' + fmtMraw(buckets.critical.cart);
+
+  document.getElementById('ib-cobranza').textContent = '$' + fmtMraw(totCobranzaExtra);
+
+  // Headline dinámico
+  const ib = document.getElementById('ib');
+  const ibIcon = document.getElementById('ib-icon');
+  const ibHead = document.getElementById('ib-headline');
+  const dsoGlobal = totI !== 0 ? (totV / totI) * 360 : 0;
+  if (dsoGlobal <= state.targetDSO) {
+    ibIcon.textContent = '✅';
+    ibHead.textContent = `Portafolio en meta: DSO global ${fmtNum1(dsoGlobal)}d ≤ ${state.targetDSO}d. Hay espacio para crecer venta.`;
+    ib.style.background = 'linear-gradient(90deg, #065f46 0%, #047857 100%)';
+  } else if (dsoGlobal <= state.targetDSO + 20) {
+    ibIcon.textContent = '⚠';
+    ibHead.textContent = `Cerca de meta: DSO ${fmtNum1(dsoGlobal)}d. Necesita cobrar ${fmtMoneyM(totCobranzaExtra)} extra para cerrar a ${state.targetDSO}d.`;
+    ib.style.background = 'linear-gradient(90deg, #92400e 0%, #b45309 100%)';
+  } else {
+    ibIcon.textContent = '🔥';
+    ibHead.textContent = `Fuera de meta: DSO ${fmtNum1(dsoGlobal)}d. Necesita cobrar ${fmtMoneyM(totCobranzaExtra)} extra para cerrar a ${state.targetDSO}d.`;
+    ib.style.background = 'linear-gradient(90deg, #991b1b 0%, #b91c1c 100%)';
+  }
+}
+
+// ============ KPIs FILTRADOS (segunda fila dinámica) ============
+function updateFilteredKPIs() {
+  let totE = 0, totU = 0, totV = 0, totI = 0, totVbase = 0;
+  const buckets = { excellent:{n:0,cart:0}, good:{n:0,cart:0}, warning:{n:0,cart:0}, risk:{n:0,cart:0}, critical:{n:0,cart:0}, na:{n:0,cart:0} };
+  state.filtered.forEach(r => {
+    const live = getLive(r);
+    const base = state.baseValues[r.idx];
+    const tgt = getRowTarget(r.idx);
+    const lvl = dsoLevel(live.W, live.hasVenta, tgt);
+    // KPI-CART V12: cartera dinámica = E − ΔReal Cobrado + ΔBE Q2 × Factor, igual que el detalle del cliente
+    const factorT = (r.T && r.T !== 0) ? r.T : 1;
+    totE += (r.E - (live.R - r.R) + (live.K - r.K) * factorT); totU += live.U; totV += live.V; totI += live.I;
+    totVbase += base.V;
+    buckets[lvl].n++; buckets[lvl].cart += live.V;
+  });
+  const dsoLive = totI !== 0 ? (totV / totI) * 360 : 0;
+  document.getElementById('kpi-cartera-f').textContent = '$' + fmtMraw(totE);
+  document.getElementById('kpi-cartera-sub-f').textContent = state.filtered.length + ' clientes filtrados';
+  document.getElementById('kpi-v-f').textContent = '$' + fmtMraw(totVbase);
+  const dV = totV - totVbase;
+  const elVf = document.getElementById('kpi-v-delta-f');
+  elVf.textContent = (dV >= 0 ? '▲+$' : '▼$') + fmtMraw(Math.abs(dV)) + ' vs escenario';
+  elVf.className = 'delta ' + (Math.abs(dV) < 1 ? '' : (dV >= 0 ? 'up' : 'down'));
+  document.getElementById('kpi-w-f').textContent = fmtNum1(dsoLive) + ' d';
+  document.getElementById('kpi-w-delta-f').textContent = '';
+  document.getElementById('kpi-count-f').textContent = state.filtered.length;
+
+  // Color del DSO filtrado por nivel
+  const lvl = dsoLevel(dsoLive, totI !== 0, state.targetDSO);
+  const dsoCardF = document.getElementById('kpi-card-w-f');
+  dsoCardF.className = 'kpi-card ' + (
+    lvl === 'excellent' || lvl === 'good' ? 'dso-green'
+    : lvl === 'warning' ? 'dso-yellow'
+    : lvl === 'risk' ? 'dso-orange'
+    : lvl === 'critical' ? 'dso-red'
+    : ''
+  );
+
+  // Tarjetas semáforo del subconjunto filtrado
+  document.getElementById('ic-ok-f').textContent = buckets.excellent.n + buckets.good.n;
+  document.getElementById('ic-ok-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.excellent.cart + buckets.good.cart);
+  document.getElementById('ic-warn-f').textContent = buckets.warning.n;
+  document.getElementById('ic-warn-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.warning.cart);
+  document.getElementById('ic-risk-f').textContent = buckets.risk.n;
+  document.getElementById('ic-risk-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.risk.cart);
+  document.getElementById('ic-crit-f').textContent = buckets.critical.n;
+  document.getElementById('ic-crit-sub-f').textContent = 'Cartera $' + fmtMraw(buckets.critical.cart);
+
+  document.getElementById('filt-count').textContent = state.filtered.length;
+}
+
+// ============ DETAIL VIEW ============
+function showDetail(r) {
+  const live = getLive(r);
+  const base = state.baseValues[r.idx];
+  const sug = getSuggestion(r, live);
+  const rowTarget = getRowTarget(r.idx);
+  const lvl = dsoLevel(live.W, live.hasVenta, rowTarget);
+  // Cartera Actual dinámica (KPI-CART V12): al cobrar más baja; al subir BE Q2 sube (× Factor de impuesto)
+  const factorT = (r.T && r.T !== 0) ? r.T : 1;
+  const carteraActualLive = r.E - (live.R - r.R) + (live.K - r.K) * factorT;
+  document.getElementById('detail-section').classList.add('active');
+  document.getElementById('detail-title').innerHTML = `${r.D_nombre} <span style="font-size:11px;color:#9ca3af;">(${r.C_id})</span> &nbsp; <span class="status-badge lvl-${lvl}">${levelLabel[lvl]}</span>`;
+  const info = document.getElementById('detail-info');
+  // Tarjetas KPI removidas: la información ya se muestra en la tabla principal.
+  info.innerHTML = '';
+}
+
+// ============ EXPORT EXCEL (match exacto de la tabla del portal) ============
+function exportExcel() {
+  if (!state.rows.length) return;
+
+  // ====== Estilos reutilizables ======
+  const borderThin = { top:{style:'thin',color:{rgb:'D1D5DB'}}, bottom:{style:'thin',color:{rgb:'D1D5DB'}}, left:{style:'thin',color:{rgb:'D1D5DB'}}, right:{style:'thin',color:{rgb:'D1D5DB'}} };
+  const borderHeader = { top:{style:'thin',color:{rgb:'FFFFFF'}}, bottom:{style:'thin',color:{rgb:'FFFFFF'}}, left:{style:'thin',color:{rgb:'FFFFFF'}}, right:{style:'thin',color:{rgb:'FFFFFF'}} };
+
+  const styleGroupGreen  = { fill:{fgColor:{rgb:'22C55E'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupOrange = { fill:{fgColor:{rgb:'EA580C'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupYellow = { fill:{fgColor:{rgb:'FACC15'}}, font:{bold:true, color:{rgb:'422006'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleGroupBlue   = { fill:{fgColor:{rgb:'1E3A8A'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:11}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColGreen    = { fill:{fgColor:{rgb:'86EFAC'}}, font:{bold:true, color:{rgb:'14532D'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleGroupBlueModule = { fill:{fgColor:{rgb:'1E40AF'}}, font:{bold:true, color:{rgb:'FFFFFF'}, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:borderHeader };
+  const styleColBlueModule   = { fill:{fgColor:{rgb:'93C5FD'}}, font:{bold:true, color:{rgb:'1E3A8A'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColOrange   = { fill:{fgColor:{rgb:'FED7AA'}}, font:{bold:true, color:{rgb:'7C2D12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+  const styleColYellow   = { fill:{fgColor:{rgb:'FEF08A'}}, font:{bold:true, color:{rgb:'713F12'}, sz:10}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:borderHeader };
+
+  // Colores semáforo por status
+  const statusColors = {
+    excellent: 'DCFCE7', good: 'D1FAE5', warning: 'FEF9C3',
+    risk: 'FFEDD5', critical: 'FEE2E2', na: 'F1F5F9'
+  };
+  const statusFont = {
+    excellent: '14532D', good: '065F46', warning: '854D0E',
+    risk: '9A3412', critical: '991B1B', na: '475569'
+  };
+
+  // ====== Construir AoA (Array of Arrays) ======
+  // Fila 0: encabezados de bloque
+  // Fila 1: encabezados de columna
+  // Fila 2+: datos
+  const aoa = [
+    ['Status', 'Plazo', 'Cuenta', 'Cliente', 'CARTERA', '', '', '', 'PRONÓSTICO', '', '', 'NODO DE VENTAS', '', '', 'NODO DE COBRANZA', '', ''],
+    ['', '', '', '', 'Cartera Actual', 'Cart Mes Anterior', 'Facturación Bruta Mes Corriente C/IVA', 'BE Pendiente + IVA', 'Pronóstico Cart Q2', 'LTM Total', 'Pronóstico DSO', 'BE Q2', 'Facturación Bruta Q2', 'BE Pendiente', 'Proyect Cobrar', 'Real Cobrado', 'Pend Cobro']
+  ];
+
+  // ====== Agrupar por Analista para subtotales ======
+  // Conservamos el orden original de aparición de cada analista
+  const analistaOrder = [];
+  const grupos = {};
+  state.rows.forEach(r => {
+    const an = (r.B_analista || '').trim() || '(Sin analista)';
+    if (!(an in grupos)) { grupos[an] = []; analistaOrder.push(an); }
+    grupos[an].push(r);
+  });
+
+  // V_export: usa r.V (valor del archivo origen) cuando no hay ediciones del usuario.
+  // Si hay ediciones (K, R, S o Q en overrides), usa live.V para reflejar los cambios.
+  // Esto evita el sobreestimado del fallback "factor=1 cuando T=0" en clientes sin venta.
+  const vExport = (r, live) => {
+    const o = state.overrides[r.idx] || {};
+    const hasEdits = (o.K !== undefined) || (o.R !== undefined) ||
+                     (o.S !== undefined) || (o.Q !== undefined);
+    return hasEdits ? live.V : r.V;
+  };
+
+  // dataRows: lista con metadata por fila para luego aplicar estilos consistentes
+  const dataRows = [];
+  const grandSums = {E:0,J:0,P:0,MT:0,V:0,I:0,K:0,L:0,M:0,Q:0,R:0,S:0};
+  analistaOrder.forEach(an => {
+    const subSums = {E:0,J:0,P:0,MT:0,V:0,I:0,K:0,L:0,M:0,Q:0,R:0,S:0};
+    grupos[an].forEach(r => {
+      const live = getLive(r);
+      const vXp = vExport(r, live);
+      dataRows.push({kind:'data', r, live, vXp});
+      const _fT = (r.T && r.T !== 0) ? r.T : 1;
+      subSums.E += (r.J + r.P - live.R);     subSums.J += r.J;
+      subSums.P += r.P;     subSums.MT += live.M * _fT;
+      subSums.V += vXp;     subSums.I += live.I; subSums.K += live.K;
+      subSums.L += r.L;     subSums.M += live.M;
+      subSums.Q += live.Q;  subSums.R += live.R; subSums.S += live.S;
+    });
+    dataRows.push({kind:'subtotal', label:`Subtotal · ${an} (${grupos[an].length} clientes)`, sums: subSums});
+    Object.keys(grandSums).forEach(k => grandSums[k] += subSums[k]);
+  });
+  dataRows.push({kind:'total', label:`TOTAL GENERAL (${state.rows.length} clientes)`, sums: grandSums});
+
+  // ====== Construir aoa con datos + subtotales + total ======
+  dataRows.forEach(dr => {
+    if (dr.kind === 'data') {
+      const {r, live, vXp} = dr;
+      // DSO usa vXp (mismo V que se exporta) para que sea consistente con la columna V
+      const dsoDays = live.hasVenta && live.I !== 0 ? (vXp / live.I) * 360 : '';
+      const cuenta = r.C_id;
+      const _canalLabel = r.B_canal || r.B_analista;
+      const cliente = `${r.D_nombre} - ${r.A_controller}${_canalLabel ? ' - ' + _canalLabel : ''}`;
+      const _factorT = (r.T && r.T !== 0) ? r.T : 1;
+      const _M_IVA = live.M * _factorT;
+      aoa.push([
+        r.Y_blocked ? 'Bloqueado' : 'Desbloqueado',
+        (r.AA_plazo!=null && r.AA_plazo!=='') ? r.AA_plazo : '',
+        cuenta,
+        cliente,
+        (r.J + r.P - live.R), r.J, r.P, _M_IVA,
+        vXp, live.I, dsoDays,
+        live.K, r.L, live.M,
+        live.Q, live.R, live.S
+      ]);
+    } else {
+      // subtotal o total: Status/Plazo/Cuenta vacíos, Cliente = label, DSO vacío
+      const s = dr.sums;
+      aoa.push(['', '', '', dr.label, s.E, s.J, s.P, s.MT, s.V, s.I, '', s.K, s.L, s.M, s.Q, s.R, s.S]);
+    }
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ====== Aplicar estilos ======
+  // Fila 0 (encabezados de bloque)
+  const setStyle = (r, c, style) => {
+    const addr = XLSX.utils.encode_cell({r, c});
+    if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+    ws[addr].s = style;
+  };
+  // Status, Plazo, Cuenta y Cliente: azul oscuro (ocupan ambas filas)
+  setStyle(0, 0, styleGroupBlue);
+  setStyle(0, 1, styleGroupBlue);
+  setStyle(0, 2, styleGroupBlue);
+  setStyle(0, 3, styleGroupBlue);
+  // CARTERA (azul módulo) - 4 cols
+  for (let c = 4; c <= 7; c++) setStyle(0, c, styleGroupBlueModule);
+  // PRONÓSTICO (verde) - 3 cols
+  for (let c = 8; c <= 10; c++) setStyle(0, c, styleGroupGreen);
+  // NODO DE VENTAS (naranja) - 3 cols
+  for (let c = 11; c <= 13; c++) setStyle(0, c, styleGroupOrange);
+  // NODO DE COBRANZA (amarillo) - 3 cols
+  for (let c = 14; c <= 16; c++) setStyle(0, c, styleGroupYellow);
+
+  // Fila 1 (encabezados de columna)
+  setStyle(1, 0, styleGroupBlue);
+  setStyle(1, 1, styleGroupBlue);
+  setStyle(1, 2, styleGroupBlue);
+  setStyle(1, 3, styleGroupBlue);
+  for (let c = 4; c <= 7; c++) setStyle(1, c, styleColBlueModule);
+  for (let c = 8; c <= 10; c++) setStyle(1, c, styleColGreen);
+  for (let c = 11; c <= 13; c++) setStyle(1, c, styleColOrange);
+  for (let c = 14; c <= 16; c++) setStyle(1, c, styleColYellow);
+
+  // ====== Estilos de filas (datos, subtotal, total) ======
+  const numFmtM = '[>=1000000]#,##0.0,," M";[>=1000]#,##0," K";"0.0 M"';
+
+  dataRows.forEach((dr, i) => {
+    const rowIdx = 2 + i;
+
+    if (dr.kind === 'data') {
+      const r = dr.r;
+      const statusBg = r.Y_blocked ? 'FEE2E2' : 'DCFCE7';
+      const statusTxt = r.Y_blocked ? '991B1B' : '14532D';
+      // Status
+      setStyle(rowIdx, 0, {
+        fill: {fgColor:{rgb: statusBg}},
+        font: {bold:true, color:{rgb: statusTxt}, sz:10},
+        alignment: {horizontal:'center', vertical:'center'},
+        border: borderThin
+      });
+      // Plazo
+      setStyle(rowIdx, 1, {
+        font: {sz:10, bold:true, color:{rgb:'1E3A8A'}},
+        alignment: {horizontal:'center', vertical:'center'},
+        border: borderThin
+      });
+      // Cuenta (SAP id)
+      setStyle(rowIdx, 2, {
+        font: {sz:10, bold:true, color:{rgb:'1E3A8A'}},
+        alignment: {horizontal:'center', vertical:'center'},
+        border: borderThin
+      });
+      // Cliente
+      setStyle(rowIdx, 3, {
+        font: {sz:10},
+        alignment: {horizontal:'left', vertical:'center', wrapText:true},
+        border: borderThin
+      });
+      // Cartera (azul) - 4 cols: E, J, P, M_IVA (todas M)
+      for (let c = 4; c <= 7; c++) {
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: 'EFF6FF'}},
+          font: {sz:10, bold:true, color:{rgb:'1E3A8A'}},
+          alignment: {horizontal:'right', vertical:'center'},
+          border: borderThin,
+          numFmt: numFmtM
+        });
+      }
+      // Columnas verdes (Pronóstico) - 3 cols: V, I, DSO (c=10)
+      for (let c = 8; c <= 10; c++) {
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: c === 10 ? statusBg : 'F0FDF4'}},
+          font: {sz:10, bold: c === 10, color: c === 10 ? {rgb: statusTxt} : {rgb:'111827'}},
+          alignment: {horizontal: c === 10 ? 'center' : 'right', vertical:'center'},
+          border: borderThin,
+          numFmt: c === 10 ? '#,##0" d"' : numFmtM
+        });
+      }
+      // Naranjas (Nodo Ventas) - 3 cols: K, L, M
+      for (let c = 11; c <= 13; c++) {
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: 'FFFBEB'}},
+          font: {sz:10},
+          alignment: {horizontal:'right', vertical:'center'},
+          border: borderThin,
+          numFmt: numFmtM
+        });
+      }
+      // Amarillas (Cobranza) - 3 cols: Q, R, S
+      for (let c = 14; c <= 16; c++) {
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: 'FEFCE8'}},
+          font: {sz:10},
+          alignment: {horizontal:'right', vertical:'center'},
+          border: borderThin,
+          numFmt: numFmtM
+        });
+      }
+    } else if (dr.kind === 'subtotal') {
+      // Fila SUBTOTAL: gris claro, negrita
+      const subBg = 'E5E7EB';
+      const subFt = '111827';
+      for (let c = 0; c <= 16; c++) {
+        const isLabel = c === 3;
+        const isSpacer = c === 0 || c === 1 || c === 2 || c === 10;
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: subBg}},
+          font: {sz:10, bold:true, color:{rgb: subFt}},
+          alignment: {horizontal: isLabel ? 'right' : (isSpacer ? 'center' : 'right'), vertical:'center'},
+          border: borderThin,
+          numFmt: isLabel || isSpacer ? undefined : numFmtM
+        });
+      }
+    } else { // total
+      // TOTAL GENERAL: azul oscuro, blanco, negrita
+      const totBg = '1E3A8A';
+      const totFt = 'FFFFFF';
+      for (let c = 0; c <= 16; c++) {
+        const isLabel = c === 3;
+        const isSpacer = c === 0 || c === 1 || c === 2 || c === 10;
+        setStyle(rowIdx, c, {
+          fill: {fgColor:{rgb: totBg}},
+          font: {sz:11, bold:true, color:{rgb: totFt}},
+          alignment: {horizontal: isLabel ? 'right' : (isSpacer ? 'center' : 'right'), vertical:'center'},
+          border: borderHeader,
+          numFmt: isLabel || isSpacer ? undefined : numFmtM
+        });
+      }
+    }
+  });
+
+  // ====== Merges (encabezados de bloque) ======
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:1,c:0}},   // Status (2 filas)
+    {s:{r:0,c:1}, e:{r:1,c:1}},   // Plazo (2 filas)
+    {s:{r:0,c:2}, e:{r:1,c:2}},   // Cuenta (2 filas)
+    {s:{r:0,c:3}, e:{r:1,c:3}},   // Cliente (2 filas)
+    {s:{r:0,c:4}, e:{r:0,c:7}},   // CARTERA (4 cols)
+    {s:{r:0,c:8}, e:{r:0,c:10}},  // PRONÓSTICO (3 cols)
+    {s:{r:0,c:11}, e:{r:0,c:13}}, // NODO DE VENTAS (3 cols)
+    {s:{r:0,c:14}, e:{r:0,c:16}}  // NODO DE COBRANZA (3 cols)
+  ];
+
+  // ====== Anchos de columna ======
+  ws['!cols'] = [
+    {wch: 13},  // Status
+    {wch: 8},   // Plazo
+    {wch: 11},  // Cuenta (SAP id)
+    {wch: 45},  // Cliente
+    {wch: 14},  // Cartera Actual
+    {wch: 14},  // Cart Mes Anterior
+    {wch: 16},  // Facturación Bruta Mes Corriente C/IVA
+    {wch: 14},  // BE Pendiente + IVA
+    {wch: 14},  // Pronóstico Cart Q2
+    {wch: 13},  // LTM Total
+    {wch: 13},  // Pronóstico DSO
+    {wch: 11},  // BE Q2
+    {wch: 13},  // Facturación Bruta Q2
+    {wch: 13},  // BE Pendiente
+    {wch: 13},  // Proyect Cobrar
+    {wch: 12},  // Real Cobrado
+    {wch: 12}   // Pend Cobro
+  ];
+
+  // ====== Alturas de fila ======
+  const rowHeights = [
+    {hpt: 24},  // Encabezado de bloque
+    {hpt: 36}   // Encabezado de columna
+  ];
+  for (let i = 0; i < state.rows.length; i++) rowHeights.push({hpt: 28});
+  ws['!rows'] = rowHeights;
+
+  // ====== Congelar paneles (primeras 2 filas y primeras 4 columnas: Status/Plazo/Cuenta/Cliente) ======
+  ws['!freeze'] = { xSplit: 4, ySplit: 2 };
+
+  // ====== Crear workbook y descargar ======
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pronóstico Q2');
+  const fechaArchivo = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Pronostico_Cartera_Q2_${fechaArchivo}.xlsx`);
+}
+
+// ============ DATOS PRECARGADOS (generados 18/05/2026 23:22) ============
+const EMBEDDED_DATA_B64 = "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";
+const EMBEDDED_DATA_GEN_TIME = "18/06/2026 22:07";
+
+async function loadEmbeddedData() {
+  try {
+    // Decodificar base64 → bytes
+    const bytes = Uint8Array.from(atob(EMBEDDED_DATA_B64), c => c.charCodeAt(0));
+    // Descomprimir gzip
+    const stream = new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
+    const text = await new Response(stream).text();
+    const data = JSON.parse(text);
+
+    // Cargar rows (re-asignar idx para asegurar consistencia)
+    state.rows = data.rows.map((r, i) => Object.assign({}, r, {idx: i}));
+    state.baseValues = {};
+    state.rows.forEach(r => {
+      state.baseValues[r.idx] = { U: r.U, V: r.V, W: r.W, K: r.K, Q: r.Q, R: r.R, S: r.S };
+    });
+    state.overrides = {};
+
+    // Cargar datos ZREPO
+    if (data.zrepoByClientMonth) state.zrepoByClientMonth = data.zrepoByClientMonth;
+    if (data.zrepoByMonth) state.zrepoByMonth = data.zrepoByMonth;
+
+    // Inicializar UI
+    initFilters();
+    document.getElementById('initial-msg').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    // Ocultar botones de carga (datos ya cargados)
+    const btnGroup = document.querySelector('.upload-btn-group');
+    if (btnGroup) btnGroup.style.display = 'none';
+    // Agregar badge de "Datos al ..." en la subtitle
+    const subtitle = document.querySelector('.subtitle');
+    if (subtitle) {
+      const badge = document.createElement('span');
+      badge.style.cssText = 'margin-left:8px;font-size:9px;color:#6b7280;font-weight:600;background:#f3f4f6;padding:2px 8px;border-radius:3px;display:inline-block;';
+      badge.textContent = '📅 Datos al ' + EMBEDDED_DATA_GEN_TIME;
+      subtitle.appendChild(badge);
+    }
+    applyFilters();
+  } catch (e) {
+    console.error('Error cargando datos embebidos:', e);
+    // Si falla la descompresión, mostrar el estado de upload normal
+    const msg = document.getElementById('initial-msg');
+    if (msg) {
+      msg.innerHTML = '<div class="icon">⚠️</div>' +
+        '<div style="margin-top:10px;font-size:14px;color:#b91c1c;">No se pudieron cargar los datos precargados</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:6px;">' + e.message + '</div>';
+    }
+  }
+}
+
+// Ejecutar al cargar la página
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadEmbeddedData);
+} else {
+  loadEmbeddedData();
+}
+
+
+
+// ============ RESALTAR CELDAS DEL CÁLCULO Pronóstico Cart Q2 ============
+// Al hacer hover en una celda .pronos-trigger, resalta sus hermanas .pronos-related
+(function setupPronosHighlight(){
+  const addH = (tr) => {
+    if (!tr) return;
+    tr.querySelectorAll('.pronos-related').forEach(c => c.classList.add('pronos-highlight'));
+  };
+  const rmH = (tr) => {
+    if (!tr) return;
+    tr.querySelectorAll('.pronos-related').forEach(c => c.classList.remove('pronos-highlight'));
+  };
+  document.addEventListener('mouseover', (e) => {
+    const trig = e.target && e.target.closest && e.target.closest('.pronos-trigger');
+    if (trig) addH(trig.closest('tr'));
+  });
+  document.addEventListener('mouseout', (e) => {
+    const trig = e.target && e.target.closest && e.target.closest('.pronos-trigger');
+    if (trig) rmH(trig.closest('tr'));
+  });
+})();
+
+// ============ RESALTAR CELDAS DEL CÁLCULO Pronóstico DSO ============
+// Al hacer hover en la celda DSO, resalta sus hermanas .dso-related (Pronóstico Cart Q2 y LTM Total)
+(function setupDsoHighlight(){
+  const addH = (tr) => tr && tr.querySelectorAll('.dso-related').forEach(c => c.classList.add('dso-highlight'));
+  const rmH  = (tr) => tr && tr.querySelectorAll('.dso-related').forEach(c => c.classList.remove('dso-highlight'));
+  document.addEventListener('mouseover', (e) => {
+    const trig = e.target && e.target.closest && e.target.closest('.dso-trigger');
+    if (trig) addH(trig.closest('tr'));
+  });
+  document.addEventListener('mouseout', (e) => {
+    const trig = e.target && e.target.closest && e.target.closest('.dso-trigger');
+    if (trig) rmH(trig.closest('tr'));
+  });
+})();
+
+// ============ TOOLTIP GLOBAL FLOTANTE ============
+// Maneja elementos .has-tip mostrando un div flotante con su atributo data-tip.
+// El div se crea una sola vez y se reposiciona dinámicamente.
+// (Sistema de resize manual y alto de filas removido — restaurado al diseño original)
+// Limpiar localStorage residual de versiones anteriores
+try {
+  localStorage.removeItem('col-widths-v1');
+  localStorage.removeItem('col-widths-v2');
+  localStorage.removeItem('col-widths-v3');
+  localStorage.removeItem('row-height-v1');
+  localStorage.removeItem('row-h-extra-v1');
+} catch(e) {}
+
+(function setupGlobalTip(){
+  let tip = null;
+  const ensureTip = () => {
+    if (tip) return tip;
+    tip = document.createElement('div');
+    tip.id = 'global-tip';
+    document.body.appendChild(tip);
+    return tip;
+  };
+  // Colorea los operadores =, +, -, − dentro del texto
+  const colorize = (txt) => {
+    // Escapar HTML primero (los datos vienen como texto plano)
+    const escaped = txt
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    // Aplicar colores a los signos (con espacios alrededor para no afectar palabras)
+    return escaped
+      .replace(/ = /g, ' <span class="op-equal">=</span> ')
+      .replace(/ \+ /g, ' <span class="op-sign">+</span> ')
+      .replace(/ − /g, ' <span class="op-sign">−</span> ')
+      .replace(/ - /g, ' <span class="op-sign">−</span> ');
+  };
+  const show = (el) => {
+    const t = ensureTip();
+    const txt = el.getAttribute('data-tip') || '';
+    if (!txt) return;
+    t.innerHTML = colorize(txt);
+    t.style.display = 'block';
+    // Posicionar: cae abajo del elemento; alineado por la derecha del elemento
+    const rect = el.getBoundingClientRect();
+    const tipRect = t.getBoundingClientRect();
+    let left = rect.right - tipRect.width;        // alineado a la derecha del header
+    if (left < 8) left = 8;                        // no salirse del viewport
+    let top = rect.bottom + 10;                    // 10px debajo del header
+    // Si no cabe abajo, mostrar arriba
+    if (top + tipRect.height > window.innerHeight - 8) {
+      top = rect.top - tipRect.height - 10;
+    }
+    t.style.left = left + 'px';
+    t.style.top = top + 'px';
+  };
+  const hide = () => { if (tip) tip.style.display = 'none'; };
+  document.addEventListener('mouseover', (e) => {
+    const el = e.target && e.target.closest && e.target.closest('.has-tip');
+    if (el) show(el);
+  });
+  document.addEventListener('mouseout', (e) => {
+    const el = e.target && e.target.closest && e.target.closest('.has-tip');
+    if (el) hide();
+  });
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+})();
+
+
+// ============ TOUR INTERACTIVO + AUTO-PLAY + NARRACIÓN ============
+(function setupTour(){
+  const steps = [
+    {
+      selector: 'h1', badge: 'Bienvenida',
+      title: 'Pronóstico',
+      desc: 'Aquí consultas y ajustas el pronóstico de cierre del trimestre. Este recorrido te muestra qué puedes ver, modificar y descargar.'
+    },
+    {
+      selector: '.kpi-row, .kpi-section, header + div, .header-bar + div',
+      fallback: 'h1', badge: 'KPIs',
+      title: 'Indicadores principales',
+      desc: 'La franja azul muestra los indicadores de toda la compañía: cartera actual, pronóstico, DSO global y clientes. La franja naranja muestra los mismos KPIs pero solo de los clientes filtrados.'
+    },
+    {
+      selector: '.controls', badge: 'Filtros',
+      title: 'Barra de filtros',
+      desc: 'Acota la información por Director, Canal, Status, Bloqueo, o palabra clave. El campo DSO meta recalcula los semáforos al instante.'
+    },
+    {
+      selector: '#btn-export', badge: 'Descarga',
+      title: 'Exportar a Excel',
+      desc: 'Descarga el reporte completo en formato Excel con tus datos vigentes, subtotales por Canal y total general. Listo para anexar a tus presentaciones.'
+    },
+    {
+      selector: '.legend-inline', badge: 'Semáforos',
+      title: 'Leyenda de DSO',
+      desc: 'Los colores indican el nivel de DSO frente a la meta: verde menor o igual a sesenta días, verde claro menor o igual a noventa días, amarillo entre noventa y ciento diez días, naranja entre ciento diez y ciento cincuenta días, y rojo cuando supera ciento cincuenta días.'
+    },
+    {
+      selector: '.blue-col.group-header, th.blue-col.group-header',
+      fallback: '.blue-col', badge: 'Módulo Cartera',
+      title: 'Bloque Cartera',
+      desc: 'El módulo azul reúne Cartera Actual, Cartera del mes anterior, Facturación Bruta del mes corriente con IVA, y BE Pendiente más IVA. Este último se calcula multiplicando BE Pendiente por el Factor Impuesto del cliente.'
+    },
+    {
+      selector: '.pronos-trigger', badge: 'Hover inteligente',
+      title: 'Pronóstico Cart Q2',
+      desc: 'Cuando pasas el cursor sobre este dato, el portal resalta automáticamente las celdas que generan el cálculo: Cartera del mes anterior, más Facturación Bruta del mes corriente, más BE Pendiente con IVA, menos lo Proyectado a Cobrar.'
+    },
+    {
+      selector: '.dso-trigger', badge: 'Hover inteligente',
+      title: 'Pronóstico DSO',
+      desc: 'Al pasar el cursor sobre el pronóstico de DSO verás resaltadas Pronóstico Cart Q2 y LTM Total, con la fórmula: Pronóstico de Cartera dividido entre LTM Total, multiplicado por trescientos sesenta.'
+    },
+    {
+      selector: 'input[data-field="K"]', badge: 'Edición',
+      title: 'BE Q2 editable',
+      desc: 'Los campos en fondo blanco son editables: BE Q2, Proyectado a Cobrar, Real Cobrado y Pendiente de Cobro. Cambia el valor en millones y todo el portal recalcula al instante.'
+    },
+    {
+      selector: 'th.yellow-col.group-header, .yellow-col.group-header',
+      fallback: '.yellow-col', badge: 'Módulo Cobranza',
+      title: 'Bloque Nodo de Cobranza',
+      desc: 'Proyectado a Cobrar, Real Cobrado y Pendiente de Cobro. Aquí registras tu avance de cobranza y se refleja inmediatamente en los KPIs y semáforos.'
+    },
+    {
+      selector: '#btn-reset', badge: 'Reset',
+      title: 'Restablecer ediciones',
+      desc: 'Este botón borra todos los valores que has editado y vuelve los datos al cierre original del portal.'
+    },
+    {
+      selector: '#tour-fab', badge: 'Final',
+      title: 'Esta guía siempre está disponible',
+      desc: 'Pulsa el botón naranja Guía rápida en cualquier momento para volver a ver este recorrido. Cualquier duda, contacta al equipo de Cartera y Cuentas por Cobrar.'
+    }
+  ];
+
+  let idx = 0;
+  let progressTimer = null;
+  let advanceTimer = null;
+  let isPaused = false;
+  let voiceOn = true;
+  let voices = [];
+  let currentUtterance = null;
+  let sessionId = 0;  // incrementa cada vez que se abre/cierra/avanza, invalida callbacks viejos
+
+  const $ = (id) => document.getElementById(id);
+  const overlay = () => $('tour-overlay');
+  const hl = () => $('tour-highlight');
+  const box = () => $('tour-box');
+
+  // Cargar voces (se llenan async en algunos navegadores)
+  function loadVoices(){
+    voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  }
+  if (window.speechSynthesis) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  // Selección de voz: NEUTRA / CLARA tipo Google es-US (sin acento marcado, tono uniforme).
+  // Si el usuario eligió una voz específica desde voces.html, se respeta esa.
+  function pickVoice(){
+    if (!voices.length) return null;
+    // 0) Voz elegida manualmente por el usuario en el probador (voces.html)
+    try {
+      const userChoice = localStorage.getItem('tour-voice-name-v1');
+      if (userChoice) {
+        const exact = voices.find(v => v.name === userChoice);
+        if (exact) return exact;
+      }
+    } catch(e) {}
+    const preferences = [
+      // 1) Google español de Estados Unidos — voz NEUTRA por excelencia (sin acento regional marcado)
+      v => /Google/i.test(v.name) && /es-US/i.test(v.lang),
+      // 2) Cualquier otra voz Google en español (también suelen ser neutras)
+      v => /Google/i.test(v.name) && /^es/i.test(v.lang),
+      // 3) Voces locales del sistema (no Natural/Online) en español — tono más plano/uniforme
+      v => !/Natural|Online/i.test(v.name) && /Sabina/i.test(v.name),         // Microsoft Sabina (Windows local, neutra mexicana)
+      v => !/Natural|Online/i.test(v.name) && /Pablo|Helena|Laura/i.test(v.name) && /^es/i.test(v.lang), // Voces locales de España
+      v => !/Natural|Online/i.test(v.name) && /^es-MX/i.test(v.lang),         // Cualquier voz local mexicana
+      v => !/Natural|Online/i.test(v.name) && /^es-US/i.test(v.lang),         // Cualquier voz local es-US
+      v => !/Natural|Online/i.test(v.name) && /^es/i.test(v.lang),            // Cualquier voz local en español
+      // 4) Fallback final: lo que haya en español
+      v => /^es/i.test(v.lang)
+    ];
+    for (const test of preferences) {
+      const found = voices.find(test);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Pre-procesa el texto para una narración natural:
+  //  - Comas y puntos se MANTIENEN → el TTS hace pausa leve en coma (~250ms) y más larga en punto (~600ms).
+  //  - Se eliminan signos de énfasis (¡!¿?, comillas, paréntesis) que generan modulación tonal artificial.
+  //  - ; y : se convierten en coma (pausa leve, en vez de pausa larga).
+  function prepText(text){
+    return String(text || '')
+      .replace(/\s*\n+\s*/g, ' ')          // saltos de línea → espacio
+      // Quitar signos de énfasis tonal (no afectan pausa, sí entonación)
+      .replace(/[¡!¿?]/g, '')              // exclamación e interrogación → fuera
+      .replace(/["'«»“”‘’]/g, '')          // comillas → fuera
+      .replace(/[()[\]{}]/g, ' ')          // paréntesis y corchetes → espacio
+      .replace(/[—–−]/g, ', ')             // guiones largos → coma (pausa leve)
+      .replace(/[·•]/g, ' ')               // bullets → espacio
+      // Convertir ; y : en coma (pausa breve)
+      .replace(/\s*;\s*/g, ', ')
+      .replace(/:\s+/g, ', ')
+      // Normalizar puntuación
+      .replace(/\.{2,}/g, '.')             // puntos suspensivos → un punto
+      .replace(/,\s*,/g, ',')              // comas dobles → una
+      .replace(/,([^\s])/g, ', $1')        // espacio tras coma
+      .replace(/\s+,/g, ',')               // sin espacio antes de coma
+      .replace(/\s+\./g, '.')              // sin espacio antes de punto
+      .replace(/\s{2,}/g, ' ')             // colapsar espacios
+      .trim();
+  }
+
+  function speak(text, onEnd){
+    if (!voiceOn || !window.speechSynthesis) { if (onEnd) onEnd(); return; }
+    // Capturar el sessionId actual; si cambia antes de onend, el callback se ignora
+    const mySid = sessionId;
+    // Doble cancel para Chrome (limpiar cola)
+    try { window.speechSynthesis.cancel(); } catch(e){}
+    setTimeout(() => {
+      if (sessionId !== mySid) return; // sesión ya cambió, abortar
+      const u = new SpeechSynthesisUtterance(prepText(text));
+      u.lang = 'es-US';   // neutral latino
+      u.rate = 1.05;      // fluido, sin atropellar
+      u.pitch = 0.95;     // ligeramente plano para reducir modulación tonal
+      u.volume = 1;
+      const v = pickVoice();
+      if (v) u.voice = v;
+      u.onend = () => {
+        if (sessionId !== mySid) return;       // sesión cambió → ignorar
+        if (currentUtterance === u) currentUtterance = null;
+        if (onEnd) onEnd();
+      };
+      u.onerror = () => {
+        if (sessionId !== mySid) return;
+        if (currentUtterance === u) currentUtterance = null;
+        if (onEnd) onEnd();
+      };
+      currentUtterance = u;
+      try { window.speechSynthesis.speak(u); } catch(e){ if (onEnd) onEnd(); }
+    }, 40); // pequeño respiro para que el cancel anterior se procese
+  }
+
+  function stopVoice(){
+    // Desconectar handlers de la utterance actual ANTES de cancelar (evita que onend dispare callbacks)
+    if (currentUtterance) {
+      try { currentUtterance.onend = null; currentUtterance.onerror = null; } catch(e){}
+      currentUtterance = null;
+    }
+    if (window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch(e){}
+      // Truco para Chrome: pause+resume vacío ayuda a "resetear" el estado
+      try { window.speechSynthesis.pause(); window.speechSynthesis.resume(); } catch(e){}
+    }
+  }
+
+  function findTarget(s){
+    if (Array.isArray(s.selector)) {
+      for (const sel of s.selector) { const el = document.querySelector(sel); if (el) return el; }
+    } else {
+      const el = document.querySelector(s.selector);
+      if (el) return el;
+    }
+    if (s.fallback) return document.querySelector(s.fallback);
+    return null;
+  }
+
+  function positionBoxNear(rect){
+    const b = box(); const bw = 380, bh = 220;
+    let top = rect.bottom + 18, left = rect.left;
+    if (top + bh > window.innerHeight - 16) top = Math.max(16, rect.top - bh - 18);
+    if (left + bw > window.innerWidth - 16) left = Math.max(16, window.innerWidth - bw - 16);
+    if (left < 16) left = 16;
+    b.style.top = top + 'px'; b.style.left = left + 'px';
+  }
+
+  function clearTimers(){
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    if (advanceTimer)  { clearTimeout(advanceTimer); advanceTimer = null; }
+  }
+
+  function setProgress(pct){
+    const bar = $('tour-progress-bar');
+    if (bar) bar.style.width = pct + '%';
+  }
+
+  // Calcular duración estimada (fallback si no hay voz)
+  function estimateDuration(text){
+    const words = text.split(/\s+/).length;
+    return Math.max(3500, Math.round(words * 245)); // ~245ms por palabra, mínimo 3.5s
+  }
+
+  function startProgressBar(duration){
+    setProgress(0);
+    const startedAt = Date.now();
+    if (progressTimer) clearInterval(progressTimer);
+    progressTimer = setInterval(() => {
+      if (isPaused) return;
+      const pct = Math.min(100, ((Date.now() - startedAt) / duration) * 100);
+      setProgress(pct);
+      if (pct >= 100) { clearInterval(progressTimer); progressTimer = null; }
+    }, 100);
+  }
+
+  function scheduleAdvance(duration){
+    if (advanceTimer) clearTimeout(advanceTimer);
+    advanceTimer = setTimeout(() => { if (!isPaused) advance(); }, duration);
+  }
+
+  function advance(){
+    if (idx >= steps.length - 1) { endTour(); return; }
+    idx++; showStep();
+  }
+
+  function showStep(){
+    sessionId++;  // cada paso es una nueva sesión: invalida callbacks del paso anterior
+    clearTimers();
+    stopVoice();
+    const s = steps[idx];
+    const target = findTarget(s) || document.body;
+    try { target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'}); } catch(e){}
+    setTimeout(() => {
+      const rect = target.getBoundingClientRect();
+      const padding = 6;
+      const h = hl();
+      h.style.top = (rect.top - padding) + 'px';
+      h.style.left = (rect.left - padding) + 'px';
+      h.style.width = (rect.width + padding*2) + 'px';
+      h.style.height = (rect.height + padding*2) + 'px';
+      positionBoxNear(rect);
+
+      $('tour-badge').textContent = s.badge;
+      $('tour-title').textContent = s.title;
+      $('tour-desc').textContent = s.desc;
+      $('tour-counter').textContent = `Paso ${idx+1} de ${steps.length}`;
+      $('tour-prev').disabled = (idx === 0);
+      $('tour-next').textContent = (idx === steps.length - 1) ? 'Cerrar ✓' : 'Siguiente →';
+
+      // Narramos primero el TÍTULO del módulo, hacemos una pausa de "punto y aparte" (~650ms),
+      // y luego la DESCRIPCIÓN.
+      const TITLE_PAUSE_MS = 650;
+      const fallbackDuration = estimateDuration(s.title + ' ' + s.desc) + TITLE_PAUSE_MS;
+      startProgressBar(fallbackDuration);
+
+      if (voiceOn && window.speechSynthesis) {
+        speak(s.title, () => {
+          if (isPaused) return;
+          setTimeout(() => {
+            if (isPaused) return;
+            speak(s.desc, () => {
+              if (!isPaused) {
+                setProgress(100);
+                advanceTimer = setTimeout(() => { if (!isPaused) advance(); }, 350);
+              }
+            });
+          }, TITLE_PAUSE_MS);
+        });
+      } else {
+        scheduleAdvance(fallbackDuration + 200);
+      }
+    }, 350);
+  }
+
+  function startTour(){
+    sessionId++;  // invalida cualquier callback de sesión anterior
+    clearTimers();
+    stopVoice();
+    idx = 0; isPaused = false;
+    overlay().classList.add('active');
+    setPauseBtnState();
+    setVoiceBtnState();
+    showStep();
+  }
+  function endTour(){
+    sessionId++;  // invalida callbacks pendientes (utterances en cola, timers async)
+    clearTimers();
+    stopVoice();
+    overlay().classList.remove('active');
+  }
+  function nextStep(){
+    if (idx >= steps.length - 1) { endTour(); return; }
+    idx++; showStep();
+  }
+  function prevStep(){
+    if (idx <= 0) return;
+    idx--; showStep();
+  }
+
+  function togglePause(){
+    isPaused = !isPaused;
+    if (isPaused) {
+      if (window.speechSynthesis) window.speechSynthesis.pause();
+      clearTimers();
+    } else {
+      if (window.speechSynthesis) window.speechSynthesis.resume();
+      // Reanudar: si la voz seguía hablando, continuará; el avance se programa cuando termine
+      // Si no había voz, reprogramar el avance restante
+      if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+        const s = steps[idx];
+        const remaining = estimateDuration(s.title + '. ' + s.desc);
+        startProgressBar(remaining);
+        scheduleAdvance(remaining + 600);
+      }
+    }
+    setPauseBtnState();
+  }
+  function toggleVoice(){
+    voiceOn = !voiceOn;
+    setVoiceBtnState();
+    if (!voiceOn) stopVoice();
+    else showStep(); // re-narrar el paso actual con voz
+  }
+  function setPauseBtnState(){
+    const b = $('tour-pause');
+    if (!b) return;
+    b.textContent = isPaused ? '▶' : '⏸';
+    b.classList.toggle('active', isPaused);
+    b.title = isPaused ? 'Reanudar' : 'Pausar';
+  }
+  function setVoiceBtnState(){
+    const b = $('tour-voice');
+    if (!b) return;
+    b.textContent = voiceOn ? '🔊' : '🔇';
+    b.classList.toggle('active', !voiceOn);
+    b.title = voiceOn ? 'Silenciar voz' : 'Activar voz';
+  }
+
+  function bind(){
+    const fab = $('tour-fab');
+    if (fab) fab.addEventListener('click', startTour);
+    $('tour-next').addEventListener('click', () => { clearTimers(); stopVoice(); nextStep(); });
+    $('tour-prev').addEventListener('click', () => { clearTimers(); stopVoice(); prevStep(); });
+    $('tour-close').addEventListener('click', endTour);
+    $('tour-pause').addEventListener('click', togglePause);
+    $('tour-voice').addEventListener('click', toggleVoice);
+    $('tour-mask').addEventListener('click', endTour);
+    document.addEventListener('keydown', (e) => {
+      if (!overlay().classList.contains('active')) return;
+      if (e.key === 'Escape') endTour();
+      else if (e.key === 'ArrowRight') { clearTimers(); stopVoice(); nextStep(); }
+      else if (e.key === 'ArrowLeft')  { clearTimers(); stopVoice(); prevStep(); }
+      else if (e.key === ' ' || e.code === 'Space') { e.preventDefault(); togglePause(); }
+    });
+    window.addEventListener('resize', () => { if (overlay().classList.contains('active')) showStep(); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
+  }
+})();
+
+
+
+// ============ Registro Service Worker (PWA) ============
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then((reg) => console.log('PWA ready:', reg.scope))
+      .catch((err) => console.warn('SW falló:', err));
+  });
+}
+// Detectar e indicar "instalable" en el botón
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstall = e;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+// Handler del botón "Instalar app"
+window.addEventListener('DOMContentLoaded', () => {
+  const ib = document.getElementById('install-btn');
+  if (!ib) return;
+  ib.addEventListener('click', async () => {
+    if (!_deferredInstall) return;
+    _deferredInstall.prompt();
+    const choice = await _deferredInstall.userChoice;
+    if (choice.outcome === 'accepted') ib.style.display = 'none';
+    _deferredInstall = null;
+  });
+});
+// Si la app ya está instalada, no mostrar botón
+window.addEventListener('appinstalled', () => {
+  const ib = document.getElementById('install-btn');
+  if (ib) ib.style.display = 'none';
+});
+
+// ============ RESIZE MANUAL DE ANCHO DE COLUMNAS ============
+// Handles arrastrables sobre cada th con data-sort. SOLO modifica el ancho.
+// No toca alto, paddings, ni la estructura del thead.
+(function setupWidthResize() {
+  const WIDTH_KEY = 'col-widths-v6';
+  let drag = null;
+
+  function getResizableThs() {
+    return Array.from(document.querySelectorAll('#data-table thead th[data-sort]'));
+  }
+
+  function applyWidth(th, w) {
+    th.style.width = w + 'px';
+    th.style.minWidth = w + 'px';
+    th.style.maxWidth = w + 'px';
+  }
+
+  function clearWidth(th) {
+    th.style.removeProperty('width');
+    th.style.removeProperty('min-width');
+    th.style.removeProperty('max-width');
+  }
+
+  function saveWidths() {
+    try {
+      const data = {};
+      getResizableThs().forEach(th => {
+        if (th.style.width) data[th.getAttribute('data-sort')] = parseInt(th.style.width, 10);
+      });
+      localStorage.setItem(WIDTH_KEY, JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  function loadWidths() {
+    try {
+      const data = JSON.parse(localStorage.getItem(WIDTH_KEY) || '{}');
+      getResizableThs().forEach(th => {
+        const k = th.getAttribute('data-sort');
+        if (data[k]) applyWidth(th, data[k]);
+      });
+    } catch(e) {}
+  }
+
+  function resetWidths() {
+    getResizableThs().forEach(clearWidth);
+    try { localStorage.removeItem(WIDTH_KEY); } catch(e) {}
+  }
+
+  function onMove(e) {
+    if (!drag) return;
+    const delta = e.pageX - drag.startX;
+    const w = Math.max(30, Math.round(drag.startW + delta));
+    applyWidth(drag.th, w);
+  }
+
+  function onUp() {
+    if (!drag) return;
+    document.body.style.cursor = '';
+    if (drag.handle) drag.handle.classList.remove('active');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    saveWidths();
+    drag = null;
+  }
+
+  function onDown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const handle = e.currentTarget;
+    const th = handle.parentElement;
+    drag = { handle, th, startX: e.pageX, startW: th.offsetWidth };
+    handle.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  function onDblClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    clearWidth(e.currentTarget.parentElement);
+    saveWidths();
+  }
+
+  function addHandles() {
+    getResizableThs().forEach(th => {
+      if (th.querySelector(':scope > .col-resizer')) return;
+      const h = document.createElement('div');
+      h.className = 'col-resizer';
+      h.title = 'Arrastrar para ajustar ancho · doble clic para restablecer';
+      h.addEventListener('mousedown', onDown);
+      h.addEventListener('dblclick', onDblClick);
+      h.addEventListener('click', ev => ev.stopPropagation());
+      th.appendChild(h);
+    });
+  }
+
+  function init() {
+    addHandles();
+    loadWidths();
+    const btn = document.getElementById('reset-widths-btn');
+    if (btn) btn.addEventListener('click', resetWidths);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 50));
+  } else {
+    setTimeout(init, 50);
+  }
+})();
+</script>
+
+<!-- Tour interactivo / Guía rápida -->
+<button id="install-btn" type="button" title="Instalar como app en tu dispositivo" style="display:none; position:fixed; top:14px; right:165px; background:linear-gradient(135deg, #1A2D6F 0%, #1E3A8A 100%); color:white; border:none; padding:8px 14px; border-radius:30px; font-family:'Segoe UI',Tahoma,sans-serif; font-weight:700; font-size:12px; cursor:pointer; box-shadow:0 4px 14px rgba(26,45,111,0.45); align-items:center; gap:6px; z-index:9990;">
+  <span style="font-size:14px;">📱</span><span>Instalar app</span>
+</button>
+<!-- Leyenda de semáforos DSO + contador de clientes (parte superior, a la izquierda del botón Guía rápida) -->
+<div id="legend-top" style="position:fixed; top:18px; right:175px; display:flex; align-items:center; gap:12px; background:white; padding:6px 12px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.12); z-index:9989; font-family:'Segoe UI',Tahoma,sans-serif;">
+  <span class="legend-inline" style="display:inline-flex; gap:10px; font-size:12px; color:#4b5563; align-items:center;">
+    <span><span class="sw" style="display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:middle; background:#10b981"></span>≤60d</span>
+    <span><span class="sw" style="display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:middle; background:#34d399"></span>≤90d</span>
+    <span><span class="sw" style="display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:middle; background:#facc15"></span>90-110</span>
+    <span><span class="sw" style="display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:middle; background:#fb923c"></span>110-150</span>
+    <span><span class="sw" style="display:inline-block; width:13px; height:13px; border-radius:3px; margin-right:4px; vertical-align:middle; background:#ef4444"></span>&gt;150</span>
+  </span>
+  <span style="font-size:12px; color:#6b7280; white-space:nowrap; border-left:1px solid #e5e7eb; padding-left:12px;">
+    <b id="row-count" style="color:#0b3d91;">0</b>/<b id="row-total" style="color:#0b3d91;">0</b>
+  </span>
+</div>
+<button id="tour-fab" type="button" title="Abrir guía rápida">
+  <span class="ic">💡</span><span>Guía rápida</span>
+</button>
+<div id="tour-overlay">
+  <div id="tour-mask"></div>
+  <div id="tour-highlight"></div>
+  <div id="tour-box">
+    <button class="close-x" id="tour-close" title="Cerrar guía">×</button>
+    <span class="badge" id="tour-badge">Bienvenida</span>
+    <h4 id="tour-title">Título</h4>
+    <p id="tour-desc">Descripción</p>
+    <div id="tour-progress"><div class="bar" id="tour-progress-bar"></div></div>
+    <div class="nav">
+      <span class="step-counter" id="tour-counter">Paso 1 de 10</span>
+      <div class="btn-group">
+        <button class="secondary ctl-btn" id="tour-voice" title="Activar / silenciar voz">🔊</button>
+        <button class="secondary ctl-btn" id="tour-pause" title="Pausar / Reanudar">⏸</button>
+        <button class="secondary" id="tour-prev">← Anterior</button>
+        <button class="primary" id="tour-next">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
