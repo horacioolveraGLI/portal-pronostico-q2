@@ -1065,9 +1065,9 @@ td.dso-highlight {
 }
 .q-tab {
   padding: 10px 22px;
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.75);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(30, 58, 138, 0.12);
+  color: #1E3A8A;
+  border: 1px solid rgba(30, 58, 138, 0.45);
   border-radius: 10px;
   cursor: pointer;
   font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -1469,10 +1469,10 @@ td.dso-highlight {
           <th class="filler" rowspan="2"></th>
         </tr>
         <tr class="col-row">
-          <th class="blue-col ctr sortable" data-sort="E" title="Cartera Actual (col E del archivo) · clic para ordenar">Cartera Actual</th>
-          <th class="blue-col ctr sortable" data-sort="J" title="Cartera al cierre del mes anterior (col I del archivo) · clic para ordenar">Cart Mes Anterior</th>
-          <th class="blue-col ctr sortable" data-sort="P" title="ZREPO Mes Corriente con IVA · clic para ordenar">Facturación Bruta Mes Corriente C/IVA</th>
-          <th class="blue-col ctr sortable" data-sort="MT" title="BE Pendiente × Factor Imp · clic para ordenar">BE Pendiente + IVA</th>
+          <th class="blue-col ctr sortable" data-sort="E" title="Cartera actual (col F del archivo) · clic para ordenar">Cartera Actual</th>
+          <th class="blue-col ctr sortable" data-sort="J" title="Cart Cierre Mes Anterior (col J del archivo) · clic para ordenar">Cart Mes Anterior</th>
+          <th class="blue-col ctr sortable" data-sort="P" title="ZREPO Mes Corriente C/IVA (col L del archivo) · clic para ordenar">Facturación Bruta Mes Corriente C/IVA</th>
+          <th class="blue-col ctr sortable" data-sort="MT" title="BE Pendiente × Factor Imp (col T × col M del archivo) · clic para ordenar">BE Pendiente + IVA</th>
           <th class="calc-col ctr sortable has-tip" data-sort="V" data-tip="Pronóstico Cart Q2 = Cartera del mes anterior + Facturación Bruta + BE Pendiente más IVA − Cobranza Proyectada" title="Clic para ordenar">Pronóstico Cart Q2</th>
           <th class="calc-col ctr sortable" data-sort="I" title="Clic para ordenar">LTM Total</th>
           <th class="calc-col ctr sortable" data-sort="dso" title="Clic para ordenar">Pronóstico DSO</th>
@@ -1854,27 +1854,35 @@ function loadQ2(wb) {
 // ============ COMPUTATIONS ============
 function getLive(r) {
   const o = state.overrides[r.idx] || {};
+  const hasEdits = (o.K !== undefined) || (o.R !== undefined) || (o.S !== undefined) || (o.Q !== undefined);
+  const I = r.I;
+  if (!hasEdits) {
+    // Sin ediciones: respetar los valores TAL CUAL vienen del archivo Excel.
+    // Nodo Pronóstico (V, I, W) ← cols O, P, Q
+    // Nodo Ventas    (K, L, M) ← cols R, S, T
+    // Nodo Cobranza  (Q, R, S) ← cols U, V, W
+    return {
+      K: r.K, L: r.L, M: r.M,   // Ventas — cols R, S, T
+      Q: r.Q, R: r.R, S: r.S,   // Cobranza — cols U, V, W
+      U: r.U, V: r.V, W: r.W,   // Cart Pend / Pronóstico Cart / Pronóstico DSO — cols N, O, Q
+      I: I, hasVenta: I !== 0
+    };
+  }
+  // Con ediciones: recalcular dinámicamente para reflejar cambios del usuario.
   const K = o.K !== undefined ? o.K : r.K;
   const R = o.R !== undefined ? o.R : r.R;
   let S = o.S !== undefined ? o.S : r.S;
   let Q;
   if (o.Q !== undefined) {
-    // Q se editó manualmente. Si S no fue editada, la derivamos: S = Q - R
-    // (mantiene la fórmula original del archivo y propaga el cambio a U/V/W/DSO)
     Q = o.Q;
     if (o.S === undefined) S = Q - R;
   } else {
-    // Q se calcula automáticamente como R + S
     Q = R + S;
   }
   const M = K - r.L;
   const U = r.J + r.P - R - S;
-  // Factor Imp: si es 0/nulo/inválido, se usa 1 para que no anule el BE Pendiente
   const factorT = (r.T && r.T !== 0) ? r.T : 1;
   const V = (M * factorT) + U;
-  // LTM (I): siempre preserva el LTM Total del Excel. El ajuste dinámico de I basado
-  // en la hoja "BE Actualizado" se removió porque esa hoja ya no se usa en el portal.
-  const I = r.I;
   const W = I !== 0 ? (V / I) * 360 : 0;
   return {K, Q, R, S, M, U, V, W, I, hasVenta: I !== 0};
 }
@@ -2033,17 +2041,15 @@ function applyFilters() {
       } else if (field === 'P') {
         va = a.P; vb = b.P;
       } else if (field === 'E') {
-        // Cartera Actual dinámica = Cart Mes Anterior + FB Mes C/IVA − Real Cobrado (live)
-        const liveA = getLive(a); const liveB = getLive(b);
-        va = a.J + a.P - liveA.R; vb = b.J + b.P - liveB.R;
+        // Cartera Actual: valor directo del archivo (col F)
+        va = a.E; vb = b.E;
       } else if (field === 'J') {
         va = a.J; vb = b.J;
       } else if (field === 'MT') {
-        // BE Pendiente + IVA = live.M × Factor Imp (fallback 1 si T = 0)
-        const lA = getLive(a); const lB = getLive(b);
+        // BE Pendiente + IVA = col T × col M del archivo (base, no live)
         const fA = (a.T && a.T !== 0) ? a.T : 1;
         const fB = (b.T && b.T !== 0) ? b.T : 1;
-        va = lA.M * fA; vb = lB.M * fB;
+        va = a.M * fA; vb = b.M * fB;
       } else {
         // Campos de getLive: V, I, K, M, Q, R, S
         va = getLive(a)[field];
@@ -2278,14 +2284,10 @@ function render() {
       <td class="text col-status"><span class="status-badge lvl-${r.Y_blocked?'critical':'good'}" title="${r.Y_blocked?'Bloqueado':'Desbloqueado'} (col Z del Cierre Q2)">${r.Y_blocked?'🔒 BLOQ':'🟢 OK'}</span></td>
       <td class="text ctr col-plazo" title="Plazo de pago: ${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+' días' : r.AA_plazo) : '—'}">${r.AA_plazo!=null && r.AA_plazo!=='' ? (typeof r.AA_plazo==='number' ? r.AA_plazo+'d' : (String(r.AA_plazo).length>4 ? String(r.AA_plazo).slice(0,3)+'.' : r.AA_plazo)) : '—'}</td>
       <td class="text" title="${r.D_nombre} · ${r.C_id} · ${r.A_controller} / ${r.B_canal || r.B_analista}"><b>${nameShort}</b><br><span class="client-info">${r.C_id} - ${r.A_controller}${(r.B_canal || r.B_analista) ? ' - ' + (r.B_canal || r.B_analista) : ''}</span></td>
-      <td class="blue-cell has-tip" data-tip="Cartera Actual = Cart Mes Anterior (${fmtMraw(r.J)}) + Fac. Bruta Mes C/IVA (${fmtMraw(r.P)}) − Real Cobrado (${fmtMraw(live.R)}) = ${fmtMraw(r.J + r.P - live.R)}">${(() => {
-        const live_E = r.J + r.P - live.R;
-        const eChg = Math.abs(live_E - r.E) > 0.01;
-        return `<span style="color:${eChg ? (live_E < r.E ? '#047857' : '#b91c1c') : 'inherit'}; font-weight:${eChg?700:600};">${fmtMraw(live_E)}</span>`;
-      })()}</td>
-      <td class="blue-cell pronos-related">${fmtMraw(r.J)}</td>
-      <td class="blue-cell pronos-related">${fmtMraw(r.P)}</td>
-      <td class="blue-cell has-tip pronos-related" data-tip="Factor Impuesto Promedio: ${r.T!=null && !isNaN(r.T) ? Number(r.T).toFixed(2) : '—'}">${fmtMraw(M_IVA)}</td>
+      <td class="blue-cell" title="Cartera actual (col F del archivo)">${fmtMraw(r.E)}</td>
+      <td class="blue-cell pronos-related" title="Cart Cierre Mes Anterior (col J del archivo)">${fmtMraw(r.J)}</td>
+      <td class="blue-cell pronos-related" title="ZREPO Mes Corriente C/IVA (col L del archivo)">${fmtMraw(r.P)}</td>
+      <td class="blue-cell has-tip pronos-related" data-tip="BE Pendiente + IVA = BE Pendiente (${fmtMraw(r.M)}) × Factor Imp (${r.T!=null && !isNaN(r.T) ? Number(r.T).toFixed(2) : '—'}) = ${fmtMraw(r.M * ((r.T && r.T !== 0) ? r.T : 1))}">${fmtMraw(r.M * ((r.T && r.T !== 0) ? r.T : 1))}</td>
       <td class="calc-cell pronos-trigger dso-related has-tip ${vChg?'changed':''}" data-tip="Pronóstico Cart Q2 = Cart Mes Anterior (${fmtMraw(r.J)}) + Fac. Bruta Mes C/IVA (${fmtMraw(r.P)}) + BE Pendiente + IVA (${fmtMraw(M_IVA)}) − Proyect Cobrar (${fmtMraw(live.Q)}) = ${fmtMraw2(live.V)}">${fmtMraw2(live.V)}</td>
       <td class="calc-cell dso-related ${iChanged?'changed':''}" title="LTM = (E + BE_Q2 × (1+BN%)) / 1000">${fmtMraw2(liveI)}</td>
       <td class="dso-cell dso-trigger has-tip lvl-${lvlW} ${wChg?'changed':''}" data-tip="Pronóstico DSO = (Pronóstico Cart Q2 / LTM Total) × 360 = (${fmtMraw2(live.V)} / ${fmtMraw2(liveI)}) × 360 = ${live.hasVenta ? fmtNum1(dsoW)+'d' : '—'}">
@@ -2372,15 +2374,14 @@ function updateTotalsFooter() {
   rows.forEach(r => {
     const live = getLive(r);
     const _fT = (r.T && r.T !== 0) ? r.T : 1;
-    // Para V (Pronóstico Cart Q2) usamos r.V (base del archivo) cuando no hay ediciones del usuario.
-    // Esto evita el bug del fallback "factor=1 cuando T=0" en clientes sin venta, que sobreestima live.V.
     const o = state.overrides[r.idx] || {};
     const hasEdits = (o.K !== undefined) || (o.R !== undefined) || (o.S !== undefined) || (o.Q !== undefined);
     const vForTotal = hasEdits ? live.V : r.V;
-    sums.E  += (r.J + r.P - live.R);    // Cartera Actual dinámica
-    sums.J  += r.J;
-    sums.P  += r.P;
-    sums.MT += live.M * _fT;            // BE Pendiente + IVA
+    // Nodo Cartera: valores directos del archivo (F, J, L) + cálculo T×M para BE Pendiente + IVA
+    sums.E  += r.E;             // col F: Cartera actual
+    sums.J  += r.J;             // col J: Cart Cierre Mes Anterior
+    sums.P  += r.P;             // col L: ZREPO Mes Corriente C/IVA (= Facturación Bruta Mes)
+    sums.MT += r.M * _fT;       // col T × col M: BE Pendiente × Factor Imp
     sums.V  += vForTotal;
     sums.I  += live.I;
     sums.K  += live.K;
