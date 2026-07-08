@@ -1092,17 +1092,17 @@ td.dso-highlight {
   box-shadow: 0 4px 12px rgba(0,0,0,0.20);
 }
 .q-tab.analysis {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
   color: white;
-  border-color: #d97706;
+  border-color: #1e3a8a;
   padding-left: 18px;
 }
 .q-tab.analysis:hover { filter: brightness(1.15); color: white; }
 .q-tab.analysis.active {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: #7c2d12;
-  border-color: #fbbf24;
-  box-shadow: 0 4px 12px rgba(217,119,6,0.55);
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  color: #0b3d91;
+  border-color: #60a5fa;
+  box-shadow: 0 4px 12px rgba(30,58,138,0.55);
 }
 /* Ajuste del header-bar para acomodar las pestañas */
 .header-bar { flex-wrap: wrap; }
@@ -1134,43 +1134,95 @@ td.dso-highlight {
 .analysis-dashboard .an-header {
   background: linear-gradient(135deg, #1A2D6F 0%, #1E3A8A 100%);
   color: white;
-  padding: 22px 26px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 14px rgba(30,58,138,0.20);
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(30,58,138,0.20);
+  display: flex; align-items: center; gap: 14px;
 }
-.analysis-dashboard .an-header h1 { font-size: 22px; margin: 0 0 6px; }
-.analysis-dashboard .an-header p { font-size: 13px; margin: 0; color: rgba(255,255,255,0.85); }
+.analysis-dashboard .an-header h1 { font-size: 15px; margin: 0; font-weight: 700; }
+.analysis-dashboard .an-header p { font-size: 11px; margin: 0; color: rgba(255,255,255,0.80); }
 .analysis-dashboard .an-section {
   background: white;
-  border-radius: 12px;
-  padding: 18px 22px;
-  margin-bottom: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 .analysis-dashboard .an-section h3 {
   color: #1E3A8A;
-  font-size: 15px;
-  margin: 0 0 14px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #e5e7eb;
+  font-size: 12px;
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid #e5e7eb;
+  letter-spacing: 0.3px;
 }
+
+/* Barra de filtros del panel Análisis */
+.an-filters {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) 1fr 1fr 1fr auto;
+  gap: 6px;
+  background: white;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.an-filters input[type="search"], .an-filters select {
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  background: white;
+  color: #111827;
+  min-width: 0;
+}
+.an-filters input[type="search"]:focus, .an-filters select:focus {
+  outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+.an-filters button {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  background: #f3f4f6;
+  color: #1F2937;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.an-filters button:hover { background: #e5e7eb; }
+@media (max-width: 900px) {
+  .an-filters { grid-template-columns: 1fr 1fr; }
+}
+
+/* Grid principal 2 columnas: izquierda KPIs + Insights, derecha charts */
+.an-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.05fr) 1.95fr;
+  gap: 8px;
+  align-items: start;
+}
+.an-panel-left, .an-panel-right { display: flex; flex-direction: column; gap: 8px; }
+
 /* Tabla de KPIs comparativos */
 .an-kpi-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
   gap: 1px;
   background: #e5e7eb;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #e5e7eb;
 }
 .an-kpi-head {
   background: #1E3A8A;
   color: white;
-  padding: 10px 14px;
+  padding: 5px 8px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
   text-align: center;
   letter-spacing: 0.3px;
 }
@@ -1178,67 +1230,76 @@ td.dso-highlight {
 .an-kpi-head.q2 { background: #0891b2; }
 .an-kpi-head.q3 { background: #059669; }
 .an-kpi-head.q4 { background: #d97706; }
-.an-kpi-head:first-child { text-align: left; padding-left: 18px; }
+.an-kpi-head:first-child { text-align: left; padding-left: 10px; }
 .an-kpi-label {
   background: #f3f4f6;
-  padding: 12px 18px;
+  padding: 5px 10px;
   font-weight: 600;
   color: #1F2937;
-  font-size: 13px;
+  font-size: 11px;
   display: flex; align-items: center;
 }
 .an-kpi-cell {
   background: white;
-  padding: 12px 14px;
+  padding: 5px 8px;
   text-align: right;
   font-weight: 700;
   color: #111827;
-  font-size: 14px;
+  font-size: 11.5px;
   display: flex; align-items: center; justify-content: flex-end;
   font-variant-numeric: tabular-nums;
 }
 .an-kpi-cell.hasdata { color: #0b3d91; }
 .an-kpi-cell.nodata { color: #9ca3af; font-weight: 500; }
 
-/* Grid de gráficas */
+/* Grid de gráficas — 4 columnas para 4 charts pequeñas en una fila.
+   Wide-chart (LTM) ocupa toda la fila superior. */
 .an-charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 .an-charts-grid-2 { grid-template-columns: 1.6fr 1fr; }
 .an-chart-box {
   background: #fafbfc;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 14px 16px;
-  min-height: 260px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-height: 200px;
   display: flex; flex-direction: column;
+  grid-column: span 1;
+  overflow: hidden;
 }
 .an-chart-title {
   font-weight: 700;
   color: #1E3A8A;
-  font-size: 13px;
-  margin-bottom: 8px;
+  font-size: 11px;
+  margin-bottom: 3px;
 }
-.an-chart-box canvas { flex: 1; min-height: 200px; max-height: 240px; }
+.an-chart-box canvas { flex: 1; min-height: 160px; max-height: 210px; }
+/* Chart wide (ocupa toda la fila superior). Altura pareja con las 4 pequeñas. */
+.an-chart-box.wide-chart { grid-column: 1 / -1; min-height: 200px; }
+.an-chart-box.wide-chart canvas { min-height: 160px; max-height: 210px; }
+/* Half-wide ya no aplica: los 4 charts van en 1 col cada uno */
+.an-chart-box.half-wide { grid-column: span 1; }
 .an-chart-note {
-  font-size: 10.5px;
+  font-size: 9px;
   color: #6b7280;
-  margin-top: 6px;
+  margin-top: 2px;
   font-style: italic;
+  line-height: 1.1;
 }
 
-/* Insights */
+/* Insights compactos */
 .an-insights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 5px;
 }
 .an-insight-card {
-  padding: 14px 16px;
-  border-radius: 10px;
-  border-left: 4px solid #6b7280;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border-left: 3px solid #6b7280;
   background: #f9fafb;
 }
 .an-insight-card.an-hint { background: #fef3c7; border-left-color: #f59e0b; }
@@ -1246,20 +1307,23 @@ td.dso-highlight {
 .an-insight-card.an-warn { background: #fef3c7; border-left-color: #f59e0b; }
 .an-insight-card.an-danger { background: #fef2f2; border-left-color: #dc2626; }
 .an-insight-card.an-info { background: #eff6ff; border-left-color: #3b82f6; }
-.an-insight-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: #111827; }
-.an-insight-card p { margin: 0; font-size: 12.5px; color: #4b5563; line-height: 1.5; }
+.an-insight-title { font-weight: 700; font-size: 11px; margin-bottom: 1px; color: #111827; }
+.an-insight-card p { margin: 0; font-size: 10.5px; color: #4b5563; line-height: 1.3; }
 .an-footer-note {
-  margin-top: 10px;
-  font-size: 11.5px;
+  margin-top: 4px;
+  font-size: 10px;
   color: #6b7280;
   text-align: center;
-  padding: 10px;
+  padding: 4px;
   font-style: italic;
 }
 
+@media (max-width: 1100px) {
+  .an-panel-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 900px) {
   .an-charts-grid, .an-charts-grid-2 { grid-template-columns: 1fr; }
-  .an-kpi-grid { font-size: 11px; }
+  .an-kpi-grid { font-size: 10px; }
 }
 </style>
 </head>
@@ -1518,119 +1582,120 @@ td.dso-highlight {
 
 </div><!-- /q-shell -->
 
-<!-- Panel Análisis (dashboard anual comparativo) -->
+<!-- Panel Análisis (dashboard anual comparativo — vista compacta) -->
 <div class="q-panel" data-q="Analisis">
   <div class="analysis-dashboard">
     <div class="an-header">
       <h1>📊 Análisis Anual 2026</h1>
-      <p>Comparativo trimestral de Cartera, DSO y Facturación · Evolución y proyección</p>
+      <p>Comparativo trimestral · Cartera · DSO · Facturación</p>
     </div>
 
-    <!-- KPI Grid: 4 columnas × N métricas -->
-    <div class="an-section">
-      <h3>Indicadores por trimestre</h3>
-      <div class="an-kpi-grid">
-        <div class="an-kpi-head">Métrica</div>
-        <div class="an-kpi-head q1">Q1</div>
-        <div class="an-kpi-head q2">Q2</div>
-        <div class="an-kpi-head q3">Q3</div>
-        <div class="an-kpi-head q4">Q4</div>
-
-        <div class="an-kpi-label">💼 Cartera Actual</div>
-        <div class="an-kpi-cell" data-metric="cartera" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="cartera" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="cartera" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="cartera" data-q="Q4">—</div>
-
-        <div class="an-kpi-label">🎯 Pronóstico Cart</div>
-        <div class="an-kpi-cell" data-metric="pronostico" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="pronostico" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="pronostico" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="pronostico" data-q="Q4">—</div>
-
-        <div class="an-kpi-label">📈 Facturación Bruta</div>
-        <div class="an-kpi-cell" data-metric="facturacion" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="facturacion" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="facturacion" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="facturacion" data-q="Q4">—</div>
-
-        <div class="an-kpi-label">⏱ DSO Global</div>
-        <div class="an-kpi-cell" data-metric="dso" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="dso" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="dso" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="dso" data-q="Q4">—</div>
-
-        <div class="an-kpi-label">📊 LTM Total</div>
-        <div class="an-kpi-cell" data-metric="ltm" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="ltm" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="ltm" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="ltm" data-q="Q4">—</div>
-
-        <div class="an-kpi-label">👥 Clientes</div>
-        <div class="an-kpi-cell" data-metric="clientes" data-q="Q1">—</div>
-        <div class="an-kpi-cell" data-metric="clientes" data-q="Q2">—</div>
-        <div class="an-kpi-cell" data-metric="clientes" data-q="Q3">—</div>
-        <div class="an-kpi-cell" data-metric="clientes" data-q="Q4">—</div>
-      </div>
+    <!-- Filtros del panel Análisis: aplican a KPIs y a las 5 gráficas -->
+    <div class="an-filters">
+      <input type="search" id="an-filter-nombre" placeholder="🔍 Buscar cliente o SAP...">
+      <select id="an-filter-director"><option value="">Director: Todos</option></select>
+      <select id="an-filter-controller"><option value="">Controller: Todos</option></select>
+      <select id="an-filter-categoria"><option value="">Categoría: Todas</option></select>
+      <button type="button" id="an-filter-reset" title="Limpiar filtros">↺ Limpiar</button>
     </div>
 
-    <!-- Gráficas -->
-    <div class="an-section">
-      <h3>Tendencias trimestrales</h3>
-      <div class="an-charts-grid">
-        <div class="an-chart-box">
-          <div class="an-chart-title">⏱ Evolución del DSO Global</div>
-          <canvas id="anChartDso"></canvas>
-          <div class="an-chart-note">Meta corporativa: 90 días</div>
+    <div class="an-panel-grid">
+      <!-- Columna izquierda: KPIs + Insights -->
+      <div class="an-panel-left">
+        <div class="an-section">
+          <h3>Indicadores por trimestre</h3>
+          <div class="an-kpi-grid">
+            <div class="an-kpi-head">Métrica</div>
+            <div class="an-kpi-head q1">Q1</div>
+            <div class="an-kpi-head q2">Q2</div>
+            <div class="an-kpi-head q3">Q3</div>
+            <div class="an-kpi-head q4">Q4</div>
+
+            <div class="an-kpi-label">💼 Cartera Actual</div>
+            <div class="an-kpi-cell" data-metric="cartera" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="cartera" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="cartera" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="cartera" data-q="Q4">—</div>
+
+            <div class="an-kpi-label">🎯 Pronóstico Cart</div>
+            <div class="an-kpi-cell" data-metric="pronostico" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="pronostico" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="pronostico" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="pronostico" data-q="Q4">—</div>
+
+            <div class="an-kpi-label">📈 Facturación Bruta</div>
+            <div class="an-kpi-cell" data-metric="facturacion" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="facturacion" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="facturacion" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="facturacion" data-q="Q4">—</div>
+
+            <div class="an-kpi-label">⏱ DSO Global</div>
+            <div class="an-kpi-cell" data-metric="dso" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="dso" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="dso" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="dso" data-q="Q4">—</div>
+
+            <div class="an-kpi-label">📊 LTM Total</div>
+            <div class="an-kpi-cell" data-metric="ltm" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="ltm" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="ltm" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="ltm" data-q="Q4">—</div>
+
+            <div class="an-kpi-label">👥 Clientes</div>
+            <div class="an-kpi-cell" data-metric="clientes" data-q="Q1">—</div>
+            <div class="an-kpi-cell" data-metric="clientes" data-q="Q2">—</div>
+            <div class="an-kpi-cell" data-metric="clientes" data-q="Q3">—</div>
+            <div class="an-kpi-cell" data-metric="clientes" data-q="Q4">—</div>
+          </div>
         </div>
-        <div class="an-chart-box">
-          <div class="an-chart-title">💼 Cartera Actual por Trimestre</div>
-          <canvas id="anChartCartera"></canvas>
-          <div class="an-chart-note">Valores en millones de pesos</div>
-        </div>
-        <div class="an-chart-box">
-          <div class="an-chart-title">📈 Facturación Bruta por Trimestre</div>
-          <canvas id="anChartFacturacion"></canvas>
-          <div class="an-chart-note">Valores en millones de pesos</div>
-        </div>
-        <div class="an-chart-box">
-          <div class="an-chart-title">🎯 Pronóstico Cartera al Cierre</div>
-          <canvas id="anChartPronostico"></canvas>
-          <div class="an-chart-note">Estimado vs valor real por trimestre</div>
+        <div class="an-section">
+          <h3>Insights y proyección</h3>
+          <div id="an-insights" class="an-insights-grid">
+            <div class="an-insight-card an-hint">
+              <div class="an-insight-title">📌 Automático</div>
+              <p>Se llenará conforme cargues datos por trimestre. Q1/Q2 → variación anual; Q4 → cierre y proyección.</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Composición: distribución por Canal -->
-    <div class="an-section">
-      <h3>Distribución de cartera por Canal</h3>
-      <div class="an-charts-grid an-charts-grid-2">
-        <div class="an-chart-box">
-          <div class="an-chart-title">🎨 Cartera Directo vs Indirecto por trimestre</div>
-          <canvas id="anChartCanal"></canvas>
-          <div class="an-chart-note">Comparativo apilado de participación por canal</div>
-        </div>
-        <div class="an-chart-box">
-          <div class="an-chart-title">🏬 Cartera por Categoría (año completo)</div>
-          <canvas id="anChartCategoria"></canvas>
-          <div class="an-chart-note">Distribución acumulada anual</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Insights y proyección -->
-    <div class="an-section">
-      <h3>Insights y proyección</h3>
-      <div id="an-insights" class="an-insights-grid">
-        <div class="an-insight-card an-hint">
-          <div class="an-insight-title">📌 Automático</div>
-          <p>Este panel se llenará automáticamente conforme cargues los datos de cada trimestre. Con Q1 y Q2 tendrás la primera lectura de variación anual; con Q4 verás el cierre completo y la proyección para el siguiente año.</p>
+      <!-- Columna derecha: 6 gráficas en grid 3x2 -->
+      <div class="an-panel-right">
+        <div class="an-section">
+          <h3>Tendencias y composición</h3>
+          <div class="an-charts-grid">
+            <div class="an-chart-box wide-chart">
+              <div class="an-chart-title" id="anChartLTMClientesTitle">📊 Top clientes por LTM</div>
+              <canvas id="anChartLTMClientes"></canvas>
+              <div class="an-chart-note">Barra por cliente del Q más reciente · color según semáforo DSO · etiqueta al final = LTM en M</div>
+            </div>
+            <div class="an-chart-box">
+              <div class="an-chart-title">⏱ DSO Global (días)</div>
+              <canvas id="anChartDso"></canvas>
+              <div class="an-chart-note">Meta: 90d · Etiqueta = días</div>
+            </div>
+            <div class="an-chart-box">
+              <div class="an-chart-title">💼 Cartera Actual (M$)</div>
+              <canvas id="anChartCartera"></canvas>
+              <div class="an-chart-note">Etiqueta = millones de pesos</div>
+            </div>
+            <div class="an-chart-box half-wide">
+              <div class="an-chart-title">🎨 Directo vs Indirecto (M$)</div>
+              <canvas id="anChartCanal"></canvas>
+              <div class="an-chart-note">Cartera acumulada por canal · Etiqueta = M</div>
+            </div>
+            <div class="an-chart-box half-wide">
+              <div class="an-chart-title">🏬 Cartera por Categoría</div>
+              <canvas id="anChartCategoria"></canvas>
+              <div class="an-chart-note">Anual acumulado · Etiqueta = % del total</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="an-footer-note" id="an-status-note">
-      🔒 Los cálculos usan la misma lógica del portal por cliente. El DSO Global aplica el descuento por Reservas Globales de cada trimestre.
+      🔒 Cálculos con la lógica del portal por cliente. DSO Global aplica descuento por Reservas Globales.
     </div>
   </div>
 </div>
@@ -3875,7 +3940,7 @@ function switchQuarter(q){
 // Q2 usa el state actual del portal; Q1/Q3/Q4 se leerán de state.quarters cuando estén disponibles.
 window._anCharts = window._anCharts || {};
 
-function collectQuarterMetrics(q){
+function collectQuarterMetrics(q, filterFn){
   // Usa Q2 desde state.rows (portal actual); otros trimestres desde state.quarters si existen.
   let rows = [];
   let reservas = 0;
@@ -3886,6 +3951,7 @@ function collectQuarterMetrics(q){
     rows = state.quarters[q].rows;
     reservas = ((state.quarters[q].reservasGlobales) || 0) * 1000000;
   }
+  if (filterFn) rows = rows.filter(filterFn);
   if (!rows.length) return null;
   let totE = 0, totV = 0, totI = 0, totL = 0;
   let directo = 0, indirecto = 0;
@@ -3927,10 +3993,83 @@ function fmtCell(val, kind){
   return '$' + val.toLocaleString('es-MX', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' M';
 }
 
+// Filtro global del panel Análisis (Nombre, Director, Controller, Categoría)
+function getAnalysisFilter(){
+  const nombre = (document.getElementById('an-filter-nombre') || {}).value || '';
+  const dir    = (document.getElementById('an-filter-director') || {}).value || '';
+  const ctl    = (document.getElementById('an-filter-controller') || {}).value || '';
+  const cat    = (document.getElementById('an-filter-categoria') || {}).value || '';
+  const nombreL = nombre.toLowerCase().trim();
+  if (!nombreL && !dir && !ctl && !cat) return null;  // sin filtro
+  return (r) => {
+    if (dir && r.A_controller !== dir) return false;
+    if (ctl && (r.B_canal || r.B_analista) !== ctl) return false;
+    if (cat) {
+      const rc = (r.D_categoria && String(r.D_categoria).trim()) ? String(r.D_categoria) : '(Sin categoría)';
+      if (rc !== cat) return false;
+    }
+    if (nombreL) {
+      const hay = (String(r.D_nombre || '') + ' ' + String(r.C_id || '')).toLowerCase();
+      if (!hay.includes(nombreL)) return false;
+    }
+    return true;
+  };
+}
+
+// Poblar selects de filtros del Análisis con opciones únicas de todos los Q disponibles
+function populateAnalysisFilters(){
+  const seen = new Set();
+  const allRows = [];
+  ['Q1','Q2','Q3','Q4'].forEach(q => {
+    const qd = state.quarters && state.quarters[q];
+    if (qd && qd.rows) qd.rows.forEach(r => {
+      const k = r.C_id;
+      if (!seen.has(k)) { seen.add(k); allRows.push(r); }
+    });
+  });
+  if (!allRows.length && state.rows) state.rows.forEach(r => allRows.push(r));
+  const dirs = [...new Set(allRows.map(r => r.A_controller).filter(Boolean))].sort();
+  const ctls = [...new Set(allRows.map(r => r.B_canal || r.B_analista).filter(Boolean))].sort();
+  const cats = [...new Set(allRows.map(r => (r.D_categoria && String(r.D_categoria).trim()) ? r.D_categoria : '(Sin categoría)'))].sort();
+  const setSel = (id, prefix, opts) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">'+prefix+': Todos</option>' + opts.map(o => `<option value="${o}">${o}</option>`).join('');
+    if (opts.includes(prev)) el.value = prev;
+  };
+  setSel('an-filter-director',   'Director',   dirs);
+  setSel('an-filter-controller', 'Controller', ctls);
+  setSel('an-filter-categoria',  'Categoría',  cats);
+}
+
+// Wire de handlers (una sola vez)
+(function bindAnalysisFilters(){
+  const ids = ['an-filter-nombre','an-filter-director','an-filter-controller','an-filter-categoria'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || el._anBound) return;
+    el._anBound = true;
+    const evt = (el.tagName === 'INPUT') ? 'input' : 'change';
+    el.addEventListener(evt, () => { if (typeof renderAnalysisDashboard === 'function') renderAnalysisDashboard(); });
+  });
+  const btn = document.getElementById('an-filter-reset');
+  if (btn && !btn._anBound) {
+    btn._anBound = true;
+    btn.addEventListener('click', () => {
+      ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      if (typeof renderAnalysisDashboard === 'function') renderAnalysisDashboard();
+    });
+  }
+})();
+
 function renderAnalysisDashboard(){
+  // Asegurar selects poblados (primera vez)
+  populateAnalysisFilters();
+  const filterFn = getAnalysisFilter();
   const quarters = ['Q1','Q2','Q3','Q4'];
   const metrics = { Q1:null, Q2:null, Q3:null, Q4:null };
-  quarters.forEach(q => { metrics[q] = collectQuarterMetrics(q); });
+  quarters.forEach(q => { metrics[q] = collectQuarterMetrics(q, filterFn); });
 
   // Llenar la tabla de KPIs
   ['cartera','pronostico','facturacion','dso','ltm','clientes'].forEach(m => {
@@ -3954,12 +4093,23 @@ function renderAnalysisDashboard(){
     if (!canvas || !window.Chart) return;
     if (window._anCharts[id]) { window._anCharts[id].destroy(); window._anCharts[id] = null; }
     const data = quarters.map(q => metrics[q] ? metrics[q][dataKey] : null);
+    const dlPlugin = window.ChartDataLabels ? {
+      display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+      anchor: 'end', align: 'top', offset: -2,
+      color: '#111827', font: { size: 10, weight: 'bold' },
+      formatter: (v) => v == null ? '' : v.toFixed(v >= 100 ? 0 : 1) + ' M'
+    } : undefined;
     window._anCharts[id] = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: { labels, datasets: [{ label, data, backgroundColor: barColors, borderRadius:6, borderSkipped:false }] },
       options: Object.assign({
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(ctx)=> label+': '+(ctx.raw==null?'—':ctx.raw.toFixed(1)+' M') } } },
+        layout: { padding: { top: 18 } },
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label:(ctx)=> label+': '+(ctx.raw==null?'—':ctx.raw.toFixed(1)+' M') } },
+          datalabels: dlPlugin
+        },
         scales:{ y:{ beginAtZero:true, ticks:{ font:{size:10}, color:'#4b5563' }, grid:{color:'#e5e7eb'} }, x:{ ticks:{ font:{size:12,weight:'bold'} } } }
       }, extraOpts||{})
     });
@@ -3986,14 +4136,24 @@ function renderAnalysisDashboard(){
         pointRadius:0, fill:false
       });
     }
+    const unit = (dataKey === 'dso') ? ' d' : ' M';
+    const dlPlugin = window.ChartDataLabels ? {
+      display: (ctx) => ctx.datasetIndex === 0 && ctx.dataset.data[ctx.dataIndex] != null,
+      align: 'top', anchor: 'end', offset: 4,
+      backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: 4, padding: 3,
+      color: '#1E3A8A', font: { size: 10, weight: 'bold' },
+      formatter: (v) => v == null ? '' : (v.toFixed(v >= 100 ? 0 : 1) + unit)
+    } : undefined;
     window._anCharts[id] = new Chart(canvas.getContext('2d'), {
       type:'line',
       data:{ labels, datasets },
       options:{
         responsive:true, maintainAspectRatio:false,
+        layout: { padding: { top: 18, right: 6 } },
         plugins:{
           legend:{ display: targetLine != null, position:'bottom', labels:{ font:{size:11} } },
-          tooltip:{ callbacks:{ label:(ctx)=> ctx.dataset.label+': '+(ctx.raw==null?'—':(dataKey==='dso'?ctx.raw.toFixed(1)+' d':ctx.raw.toFixed(1)+' M')) } }
+          tooltip:{ callbacks:{ label:(ctx)=> ctx.dataset.label+': '+(ctx.raw==null?'—':(dataKey==='dso'?ctx.raw.toFixed(1)+' d':ctx.raw.toFixed(1)+' M')) } },
+          datalabels: dlPlugin
         },
         scales:{ y:{ beginAtZero:true, ticks:{ font:{size:10}, color:'#4b5563' }, grid:{color:'#e5e7eb'} }, x:{ ticks:{ font:{size:12,weight:'bold'} } } }
       }
@@ -4006,6 +4166,14 @@ function renderAnalysisDashboard(){
     if (window._anCharts.anChartCanal) { window._anCharts.anChartCanal.destroy(); window._anCharts.anChartCanal = null; }
     const dirData = quarters.map(q => metrics[q] ? metrics[q].directoM : null);
     const indData = quarters.map(q => metrics[q] ? metrics[q].indirectoM : null);
+    const dlPlugin = window.ChartDataLabels ? {
+      display: (ctx) => {
+        const v = ctx.dataset.data[ctx.dataIndex];
+        return v != null && v > 0;
+      },
+      color: 'white', font: { size: 10, weight: 'bold' },
+      formatter: (v) => v == null || v < 5 ? '' : v.toFixed(0) + 'M'
+    } : undefined;
     window._anCharts.anChartCanal = new Chart(canvas.getContext('2d'), {
       type:'bar',
       data:{ labels, datasets:[
@@ -4014,7 +4182,11 @@ function renderAnalysisDashboard(){
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{position:'bottom', labels:{ font:{size:11} } }, tooltip:{ callbacks:{ label:(ctx)=> ctx.dataset.label+': '+(ctx.raw==null?'—':ctx.raw.toFixed(1)+' M') } } },
+        plugins:{
+          legend:{position:'bottom', labels:{ font:{size:11} } },
+          tooltip:{ callbacks:{ label:(ctx)=> ctx.dataset.label+': '+(ctx.raw==null?'—':ctx.raw.toFixed(1)+' M') } },
+          datalabels: dlPlugin
+        },
         scales:{ y:{ beginAtZero:true, stacked:true, ticks:{ font:{size:10} }, grid:{color:'#e5e7eb'} }, x:{ stacked:true, ticks:{ font:{size:12,weight:'bold'} } } }
       }
     });
@@ -4033,22 +4205,118 @@ function renderAnalysisDashboard(){
     });
     const entries = Object.entries(catAcc).sort((a,b)=>b[1]-a[1]);
     const pal = ['#1E3A8A','#0891b2','#7c3aed','#059669','#d97706','#dc2626','#0b3d91','#facc15'];
+    const totalCat = entries.reduce((s, e) => s + (e[1] || 0), 0);
+    const dlPlugin = window.ChartDataLabels ? {
+      display: (ctx) => {
+        const v = ctx.dataset.data[ctx.dataIndex];
+        return v != null && totalCat > 0 && (v / totalCat) >= 0.04; // solo mostrar si el segmento es ≥ 4%
+      },
+      color: 'white', font: { size: 10, weight: 'bold' },
+      formatter: (v) => {
+        if (v == null || totalCat === 0) return '';
+        const pct = (v / totalCat) * 100;
+        return pct.toFixed(0) + '%';
+      }
+    } : undefined;
     window._anCharts.anChartCategoria = new Chart(canvas.getContext('2d'), {
       type:'doughnut',
       data:{ labels: entries.map(e=>e[0]), datasets:[{ data: entries.map(e=>e[1]), backgroundColor: entries.map((_,i)=>pal[i%pal.length]), borderWidth:2, borderColor:'white' }] },
       options:{
         responsive:true, maintainAspectRatio:false, cutout:'55%',
-        plugins:{ legend:{position:'right', labels:{ font:{size:11}, boxWidth:12 } }, tooltip:{ callbacks:{ label:(ctx)=> ctx.label+': '+ctx.raw.toFixed(1)+' M' } } }
+        plugins:{
+          legend:{position:'right', labels:{ font:{size:11}, boxWidth:12 } },
+          tooltip:{ callbacks:{ label:(ctx)=> ctx.label+': '+ctx.raw.toFixed(1)+' M ('+(totalCat ? ((ctx.raw/totalCat)*100).toFixed(1) : 0)+'%)' } },
+          datalabels: dlPlugin
+        }
+      }
+    });
+  }
+
+  // Nueva gráfica: LTM del Q más reciente por cliente (top N, barras horizontales)
+  function makeLTMClientesChart(){
+    const canvas = document.getElementById('anChartLTMClientes');
+    if (!canvas || !window.Chart) return;
+    if (window._anCharts.anChartLTMClientes) { window._anCharts.anChartLTMClientes.destroy(); window._anCharts.anChartLTMClientes = null; }
+    // Determinar Q más reciente CON datos de LTM (recorre Q4→Q1)
+    let qActive = null;
+    for (const q of ['Q4','Q3','Q2','Q1']) {
+      const qd = state.quarters && state.quarters[q];
+      if (qd && qd.rows && qd.rows.length && qd.rows.some(r => (r.I || 0) > 0)) { qActive = q; break; }
+    }
+    if (!qActive) return;
+    // Aplicar filtros del panel Análisis (si están activos)
+    const _filterFn = (typeof getAnalysisFilter === 'function') ? getAnalysisFilter() : null;
+    const rows = state.quarters[qActive].rows.filter(r => (r.I || 0) > 0 && (!_filterFn || _filterFn(r)));
+    if (!rows.length) return;
+    const sorted = [...rows].sort((a,b) => (b.I||0) - (a.I||0));
+    const TOP = 10;
+    const top = sorted.slice(0, TOP);
+    // Actualizar título con el Q usado
+    const titleEl = document.getElementById('anChartLTMClientesTitle');
+    if (titleEl) titleEl.textContent = '📊 Top ' + top.length + ' clientes por LTM — ' + qActive;
+    const labels = top.map(r => {
+      const n = String(r.D_nombre || r.C_id || '');
+      return n.length > 20 ? n.slice(0, 18) + '…' : n;
+    });
+    const values = top.map(r => (r.I || 0) / 1_000_000);
+    // Color: semáforo DSO por cliente (verde/amarillo/naranja/rojo)
+    const target = state.targetDSO || 90;
+    const colors = top.map(r => {
+      const W = r.W || 0;
+      if (!(r.I > 0)) return '#9ca3af';
+      if (W <= Math.max(30, target - 30)) return '#10b981';
+      if (W <= target) return '#34d399';
+      if (W <= target + 20) return '#facc15';
+      if (W <= target + 60) return '#fb923c';
+      return '#ef4444';
+    });
+    const maxV = Math.max(...values, 1);
+    const dsPlugins = {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => 'LTM: ' + (ctx.raw != null ? ctx.raw.toFixed(1) + ' M' : '—'),
+          afterLabel: (ctx) => {
+            const r = top[ctx.dataIndex];
+            const dso = r.W ? r.W.toFixed(0) + 'd' : '—';
+            return 'DSO: ' + dso + ' · SAP: ' + r.C_id;
+          }
+        }
+      }
+    };
+    if (window.ChartDataLabels) {
+      dsPlugins.datalabels = {
+        display: true,
+        anchor: 'end',
+        align: 'end',
+        clamp: true,
+        color: '#111827',
+        font: { size: 8, weight: 'bold' },
+        formatter: (v) => (v == null ? '' : v.toFixed(v >= 100 ? 0 : 1) + 'M')
+      };
+    }
+    window._anCharts.anChartLTMClientes = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'LTM ' + qActive, data: values, backgroundColor: colors, borderRadius: 2, borderSkipped: false }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { right: 38 } },
+        plugins: dsPlugins,
+        scales: {
+          x: { beginAtZero: true, suggestedMax: maxV * 1.10, ticks: { font: { size: 8 }, color: '#4b5563', callback: (v) => v + 'M' }, grid: { color: '#e5e7eb' } },
+          y: { ticks: { font: { size: 8 }, color: '#111827', autoSkip: false }, grid: { display: false } }
+        }
       }
     });
   }
 
   makeLineChart('anChartDso', 'dso', 'DSO Global', state.targetDSO || 90);
   makeSimpleBarChart('anChartCartera', 'cartera', 'Cartera Actual');
-  makeSimpleBarChart('anChartFacturacion', 'facturacion', 'Facturación');
-  makeLineChart('anChartPronostico', 'pronostico', 'Pronóstico Cart');
   makeStackedCanalChart();
   makeCategoriaChart();
+  makeLTMClientesChart();
 
   renderAnalysisInsights(metrics);
 }
