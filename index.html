@@ -3078,9 +3078,11 @@ function exportExcel() {
 
   // ====== Crear workbook y descargar ======
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Pronóstico Q2');
+  // Nombre de la pestaña y del archivo: reflejan el trimestre activo actualmente en el portal.
+  const _q = (typeof window._currentQuarter !== 'undefined' && ['Q1','Q2','Q3','Q4'].includes(window._currentQuarter)) ? window._currentQuarter : 'Q2';
+  XLSX.utils.book_append_sheet(wb, ws, `Pronóstico ${_q}`);
   const fechaArchivo = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `Pronostico_Cartera_Q2_${fechaArchivo}.xlsx`);
+  XLSX.writeFile(wb, `Pronostico_2026_${_q}_${fechaArchivo}.xlsx`);
 }
 
 // ============ DATOS PRECARGADOS (generados 18/05/2026 23:22) ============
